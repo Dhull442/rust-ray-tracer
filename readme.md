@@ -1,5 +1,6 @@
 ## Path Tracer
 
+usage: `cargo run > image.ppm`
 
 
 

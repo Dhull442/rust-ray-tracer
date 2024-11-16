@@ -1,9 +1,8 @@
 use log::{info, warn};
-use std::cmp::min;
 mod ray;
 mod vector;
 use ray::Ray;
-use vector::{Color, Vector};
+use vector::Vector;
 
 pub struct Camera {
     viewport_width: f64,
@@ -93,8 +92,7 @@ impl Image {
         for i in 0..self.image_height {
             info!(target: "render", "Generating Row {i:?}");
             for j in 0..self.image_width {
-                let ray = self.camera.get_ray(j, i);
-                ray.color().write();
+                self.camera.get_ray(j, i).color().write();
             }
         }
         info!(target: "render", "Generation Done!");
