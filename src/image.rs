@@ -3,6 +3,7 @@ mod ray;
 mod vector;
 use ray::Ray;
 use vector::Vector;
+use image::{RgbImage, ImageBuffer, Rgb};
 
 pub struct Camera {
     viewport_width: f64,
@@ -61,7 +62,7 @@ impl Camera {
         }
     }
 
-    pub fn get_ray(&self, idx_width: u64, idx_height: u64) -> Ray {
+    pub fn get_ray(&self, idx_width: u32, idx_height: u32) -> Ray {
         let pixel_center = self.pixel00_loc
             + (idx_width as f64) * self.pixel_delta_u
             + (idx_height as f64) * self.pixel_delta_v;
@@ -71,30 +72,33 @@ impl Camera {
 
 pub struct Image {
     aspect_ratio: f64,
-    image_width: u64,
-    image_height: u64,
+    image_width: u32,
+    image_height: u32,
     camera: Camera,
+    buffer: RgbImage,
 }
 
 impl Image {
-    pub fn new(aspect_ratio: f64, image_width: u64) -> Self {
-        let image_height = (image_width as f64 / aspect_ratio) as u64;
+    pub fn new(aspect_ratio: f64, image_width: u32) -> Self {
+        let image_height = (image_width as f64 / aspect_ratio) as u32;
         Self {
             aspect_ratio: aspect_ratio,
             image_width: image_width,
             image_height: image_height,
             camera: Camera::new(1.0, 2.0, image_width as f64, image_height as f64),
+            buffer: ImageBuffer::new(image_width, image_height),
         }
     }
 
     pub fn render(&mut self) {
-        println!("P3\n{} {}\n255", self.image_width, self.image_height);
+        // println!("P3\n{} {}\n255", self.image_width, self.image_height);
         for i in 0..self.image_height {
             info!(target: "render", "Generating Row {i:?}");
             for j in 0..self.image_width {
-                self.camera.get_ray(j, i).color().write();
+                self.buffer.put_pixel(j ,i , self.camera.get_ray(j, i).color().as_pixel());
             }
         }
         info!(target: "render", "Generation Done!");
+        self.buffer.save("image.png").unwrap();
     }
 }

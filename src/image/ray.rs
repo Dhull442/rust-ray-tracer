@@ -36,7 +36,7 @@ impl Ray {
     }
 
     pub fn color(&self) -> Color {
-        if self.hit_sphere(Vector{x:0.0,y:0.0,z:-5.0},0.5) {
+        if self.hit_sphere(Vector{x:0.0,y:0.0,z:-2.0},0.5) {
             return Color::red();
         }
 

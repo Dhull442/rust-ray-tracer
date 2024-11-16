@@ -1,9 +1,9 @@
 ## Path Tracer
 
-usage: `cargo run > image.ppm`
+usage: `cargo run`
 
 Most Recent Render:
-![PPM Image](image.ppm "Recent Render")
+![PNG Image](image.png "Recent Render")
 
 
 

@@ -1,4 +1,5 @@
 use core::ops::{Add, Div, Mul, Sub};
+use image::Rgb;
 
 #[derive(Default, Copy, Clone)]
 pub struct Vector {
@@ -101,8 +102,8 @@ pub struct Color {
 }
 
 impl Color {
-    pub fn write(&self) {
-        println!("{} {} {}", self.r, self.g, self.b);
+    pub fn as_pixel(&self) -> Rgb<u8> {
+       	Rgb([self.r,self.g,self.b])
     }
 
     pub fn black() -> Self {
