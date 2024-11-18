@@ -30,11 +30,11 @@ impl Ray {
 
     pub fn color(&self, world: &HittableObjects) -> Color {
         let mut rec = HitRecord::default();
-        if (world.hit(
+        if world.hit(
             *self,
             utility::Interval::from(0.0, utility::INFINITY),
             &mut rec,
-        )) {
+        ) {
             return Color::from_unit_vector(rec.normal);
         }
         let unit_direction = self.direction.unit_vector();

@@ -1,3 +1,5 @@
+use rand::Rng;
+
 // Constants
 pub const INFINITY: f64 = f64::INFINITY;
 pub const PI: f64 = 3.1415926535897932385;
@@ -5,6 +7,10 @@ pub const PI: f64 = 3.1415926535897932385;
 // Utility Functions
 pub fn degree_to_radians(degree: f64) -> f64 {
     return degree * PI / 180.0;
+}
+
+pub fn random()->f64{
+	rand::thread_rng().gen_range(0.0..1.0)
 }
 
 pub struct Interval {
@@ -36,17 +42,31 @@ impl Interval {
         self.min < x && x < self.max
     }
 
-    pub fn Empty() -> Self {
+    pub fn empty() -> Self {
         Self {
             min: INFINITY,
             max: -INFINITY,
         }
     }
 
-    pub fn Universe() -> Self {
+    pub fn universe() -> Self {
         Self {
             min: -INFINITY,
             max: INFINITY,
         }
+    }
+
+    pub fn random(&self) -> f64 {
+    	rand::thread_rng().gen_range(self.min .. self.max)
+    }
+
+    pub fn clamp(&self, x: f64) -> f64 {
+    	if x < self.min {
+    		return self.min;
+    	}
+    	if x > self.max {
+    		return self.max;
+    	}
+    	x
     }
 }

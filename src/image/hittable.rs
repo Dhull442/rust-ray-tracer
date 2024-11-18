@@ -84,16 +84,18 @@ impl HittableObjects {
 
     pub fn hit(&self, ray: Ray, ray_t: utility::Interval, rec: &mut HitRecord) -> bool {
         let mut closest_so_far = ray_t.max;
+        let mut hit_something = false;
         for object in self.objects.iter() {
             match object {
                 Hittable::Sphere(sphere) => {
                     if sphere.hit(ray, utility::Interval::from(ray_t.min, closest_so_far), rec) {
-                        return true;
+                        closest_so_far = rec.t;
+                        hit_something = true;
                     }
                 }
                 _ => {}
             }
         }
-        false
+        hit_something
     }
 }

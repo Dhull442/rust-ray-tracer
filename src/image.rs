@@ -6,6 +6,7 @@ use hittable::{HitRecord, Hittable, HittableObjects, Sphere};
 use image::{ImageBuffer, Rgb, RgbImage};
 use ray::Ray;
 use vector::{Color, Vector};
+use indicatif::ProgressBar;
 
 pub struct Camera {
     viewport_width: f64,
@@ -18,6 +19,8 @@ pub struct Camera {
     pixel_delta_v: Vector,
     viewport_upper_left: Vector,
     pixel00_loc: Vector,
+    sample_per_pixel: u32,
+    pixel_sample_scale: f64,
 }
 
 impl Camera {
@@ -26,6 +29,7 @@ impl Camera {
         viewport_height: f64,
         image_width: f64,
         image_height: f64,
+        sample_per_pixel: u32,
     ) -> Self {
         let viewport_width = viewport_height * image_width / image_height;
         let center = Vector::default();
@@ -61,14 +65,21 @@ impl Camera {
             pixel_delta_v: pixel_delta_v,
             viewport_upper_left: viewport_upper_left,
             pixel00_loc: pixel00_loc,
+            sample_per_pixel: sample_per_pixel,
+            pixel_sample_scale: 1.0 / sample_per_pixel as f64,
         }
     }
 
     pub fn get_ray(&self, idx_width: u32, idx_height: u32) -> Ray {
-        let pixel_center = self.pixel00_loc
-            + (idx_width as f64) * self.pixel_delta_u
-            + (idx_height as f64) * self.pixel_delta_v;
-        Ray::new(self.center, pixel_center - self.center)
+        let offset = Self::sample_square();
+        let pixel_sample = self.pixel00_loc
+            + (idx_width as f64 + offset.x) * self.pixel_delta_u
+            + (idx_height as f64 + offset.y ) * self.pixel_delta_v;
+        Ray::new(self.center, pixel_sample - self.center)
+    }
+
+    fn sample_square() -> Vector {
+        Vector{x: utility::random() - 0.5, y: utility::random() - 0.5, z: 0.0}
     }
 }
 
@@ -82,20 +93,20 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn new(aspect_ratio: f64, image_width: u32) -> Self {
+    pub fn new(aspect_ratio: f64, image_width: u32, sample_per_pixel: u32) -> Self {
         let image_height = (image_width as f64 / aspect_ratio) as u32;
         Self {
             aspect_ratio: aspect_ratio,
             image_width: image_width,
             image_height: image_height,
-            camera: Camera::new(1.0, 2.0, image_width as f64, image_height as f64),
+            camera: Camera::new(1.0, 2.0, image_width as f64, image_height as f64, sample_per_pixel),
             buffer: ImageBuffer::new(image_width, image_height),
             world: HittableObjects::new(),
         }
     }
 
     pub fn render(&mut self) {
-        // println!("P3\n{} {}\n255", self.image_width, self.image_height);
+        let pb = ProgressBar::new(self.image_height as u64);
         self.world.add(Hittable::Sphere(Sphere::new(
             Vector {
                 x: 0.0,
@@ -114,14 +125,20 @@ impl Image {
         )));
 
         for i in 0..self.image_height {
+            pb.inc(1);
             for j in 0..self.image_width {
+                let mut pixel_color = Color::black();
+                for _ in 0..self.camera.sample_per_pixel {
+                    pixel_color = pixel_color + self.camera.pixel_sample_scale * self.camera.get_ray(j,i).color(&self.world);
+                }
                 self.buffer.put_pixel(
                     j,
                     i,
-                    self.camera.get_ray(j, i).color(&self.world).as_pixel(),
+                    pixel_color.as_pixel(),
                 );
             }
         }
+        pb.finish_with_message("done");
         self.buffer.save("image.png").unwrap();
         self.world.clear();
     }

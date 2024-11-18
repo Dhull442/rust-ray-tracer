@@ -126,9 +126,9 @@ impl Color {
             ib += 1.0;
         }
         Self {
-            r: (unit_vector.x * 255.0) as u8,
-            g: (unit_vector.y * 255.0) as u8,
-            b: (unit_vector.z * 255.0) as u8,
+            r: (ir * 255.0) as u8,
+            g: (ig * 255.0) as u8,
+            b: (ib * 255.0) as u8,
         }
     }
 
