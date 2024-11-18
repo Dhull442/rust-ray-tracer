@@ -1,3 +1,5 @@
+use crate::image::hittable::{HitRecord, HittableObjects};
+use crate::image::utility;
 use crate::image::vector::{Color, Vector};
 
 #[derive(Default, Clone, Copy)]
@@ -26,20 +28,15 @@ impl Ray {
         self.origin + self.direction * t
     }
 
-    fn hit_sphere(&self, center: Vector, radius: f64) -> bool {
-        let oc = center - self.origin();
-        let a = self.direction.dot(self.direction);
-        let b = -2.0 * self.direction.dot(oc);
-        let c = oc.dot(oc) - radius * radius;
-        let discriminant = b*b - 4.0*a*c;
-        discriminant >= 0.0
-    }
-
-    pub fn color(&self) -> Color {
-        if self.hit_sphere(Vector{x:0.0,y:0.0,z:-2.0},0.5) {
-            return Color::red();
+    pub fn color(&self, world: &HittableObjects) -> Color {
+        let mut rec = HitRecord::default();
+        if (world.hit(
+            *self,
+            utility::Interval::from(0.0, utility::INFINITY),
+            &mut rec,
+        )) {
+            return Color::from_unit_vector(rec.normal);
         }
-
         let unit_direction = self.direction.unit_vector();
         let a = 0.5 * (unit_direction.y + 1.0);
         (1.0 - a) * Color::white()

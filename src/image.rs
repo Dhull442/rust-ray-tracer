@@ -1,9 +1,11 @@
-use log::{info, warn};
+mod hittable;
 mod ray;
+mod utility;
 mod vector;
+use hittable::{HitRecord, Hittable, HittableObjects, Sphere};
+use image::{ImageBuffer, Rgb, RgbImage};
 use ray::Ray;
-use vector::Vector;
-use image::{RgbImage, ImageBuffer, Rgb};
+use vector::{Color, Vector};
 
 pub struct Camera {
     viewport_width: f64,
@@ -76,6 +78,7 @@ pub struct Image {
     image_height: u32,
     camera: Camera,
     buffer: RgbImage,
+    world: HittableObjects,
 }
 
 impl Image {
@@ -87,18 +90,39 @@ impl Image {
             image_height: image_height,
             camera: Camera::new(1.0, 2.0, image_width as f64, image_height as f64),
             buffer: ImageBuffer::new(image_width, image_height),
+            world: HittableObjects::new(),
         }
     }
 
     pub fn render(&mut self) {
         // println!("P3\n{} {}\n255", self.image_width, self.image_height);
+        self.world.add(Hittable::Sphere(Sphere::new(
+            Vector {
+                x: 0.0,
+                y: 0.0,
+                z: -1.0,
+            },
+            0.5,
+        )));
+        self.world.add(Hittable::Sphere(Sphere::new(
+            Vector {
+                x: 0.0,
+                y: -100.5,
+                z: -1.0,
+            },
+            100.0,
+        )));
+
         for i in 0..self.image_height {
-            info!(target: "render", "Generating Row {i:?}");
             for j in 0..self.image_width {
-                self.buffer.put_pixel(j ,i , self.camera.get_ray(j, i).color().as_pixel());
+                self.buffer.put_pixel(
+                    j,
+                    i,
+                    self.camera.get_ray(j, i).color(&self.world).as_pixel(),
+                );
             }
         }
-        info!(target: "render", "Generation Done!");
         self.buffer.save("image.png").unwrap();
+        self.world.clear();
     }
 }

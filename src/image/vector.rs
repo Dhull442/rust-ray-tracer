@@ -1,3 +1,5 @@
+use crate::image::ray::Ray;
+use crate::image::utility;
 use core::ops::{Add, Div, Mul, Sub};
 use image::Rgb;
 
@@ -10,7 +12,11 @@ pub struct Vector {
 
 impl Vector {
     pub fn len(&self) -> f64 {
-        (self.x.powf(2.0) + self.y.powf(2.0) + self.z.powf(2.0)).sqrt()
+        self.len_squared().sqrt()
+    }
+
+    pub fn len_squared(&self) -> f64 {
+        self.x.powf(2.0) + self.y.powf(2.0) + self.z.powf(2.0)
     }
     pub fn print(&self) {
         println!("Vector: {} {} {}", self.x, self.y, self.z);
@@ -103,7 +109,27 @@ pub struct Color {
 
 impl Color {
     pub fn as_pixel(&self) -> Rgb<u8> {
-       	Rgb([self.r,self.g,self.b])
+        Rgb([self.r, self.g, self.b])
+    }
+
+    pub fn from_unit_vector(unit_vector: Vector) -> Self {
+        let mut ir = unit_vector.x;
+        let mut ig = unit_vector.y;
+        let mut ib = unit_vector.z;
+        if ir < 0.0 {
+            ir += 1.0;
+        }
+        if ig < 0.0 {
+            ig += 1.0;
+        }
+        if ib < 0.0 {
+            ib += 1.0;
+        }
+        Self {
+            r: (unit_vector.x * 255.0) as u8,
+            g: (unit_vector.y * 255.0) as u8,
+            b: (unit_vector.z * 255.0) as u8,
+        }
     }
 
     pub fn black() -> Self {
@@ -117,15 +143,15 @@ impl Color {
         }
     }
 
-    pub fn red() -> Self{
-    	Self{ r: 255, g: 0, b: 0}
+    pub fn red() -> Self {
+        Self { r: 255, g: 0, b: 0 }
     }
 
-    pub fn green() -> Self{
-    	Self{ r: 0, g: 255, b: 0}
+    pub fn green() -> Self {
+        Self { r: 0, g: 255, b: 0 }
     }
-    pub fn blue() -> Self{
-    	Self{r:0,g:0,b:255}
+    pub fn blue() -> Self {
+        Self { r: 0, g: 0, b: 255 }
     }
 }
 

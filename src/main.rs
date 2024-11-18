@@ -1,4 +1,3 @@
-// use clippy;
 mod image;
 use image::Image;
 fn main() {
