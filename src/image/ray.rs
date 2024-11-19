@@ -35,15 +35,15 @@ impl Ray {
             utility::Interval::from(0.0, utility::INFINITY),
             &mut rec,
         ) {
-            return Color::from_unit_vector(rec.normal);
+            return 0.5* (Color::from_unit_vector(rec.normal) + Color::white());
         }
         let unit_direction = self.direction.unit_vector();
         let a = 0.5 * (unit_direction.y + 1.0);
         (1.0 - a) * Color::white()
             + a * Color {
-                r: 128,
-                g: 179,
-                b: 255,
+                r: 0.5,
+                g: 0.7,
+                b: 1.0,
             }
     }
 }
