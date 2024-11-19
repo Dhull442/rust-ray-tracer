@@ -72,6 +72,17 @@ impl Vector {
         }
     }
 
+    pub fn random_in_unit_disk() -> Self{
+        loop {
+            let mut vector = Vector::random_interval(Interval::from(-1.0,1.0));
+            vector.z = 0.0;
+            if vector.len_squared() < 1.0 {
+                return vector;
+            }
+
+        }
+    }
+
     pub fn near_zero(&self) -> bool {
         let ep: f64 = 1e-8;
         self.x.abs() < ep && self.y.abs() < ep && self.z.abs() < ep
@@ -87,6 +98,7 @@ impl Vector {
         let ray_out_parallel = -1.0 * (1.0 - ray_out_perp.len_squared()).abs().sqrt() * normal;
         ray_out_perp + ray_out_parallel
     }
+
 }
 
 impl Add for Vector {
