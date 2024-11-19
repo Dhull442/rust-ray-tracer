@@ -9,10 +9,11 @@ pub fn degree_to_radians(degree: f64) -> f64 {
     return degree * PI / 180.0;
 }
 
-pub fn random()->f64{
-	rand::thread_rng().gen_range(0.0..1.0)
+pub fn random() -> f64 {
+    rand::thread_rng().gen_range(0.0..1.0)
 }
 
+#[derive(Default, Copy, Clone)]
 pub struct Interval {
     pub min: f64,
     pub max: f64,
@@ -56,17 +57,17 @@ impl Interval {
         }
     }
 
-    pub fn random(&self) -> f64 {
-    	rand::thread_rng().gen_range(self.min .. self.max)
+    pub fn random(interval: Self) -> f64 {
+        rand::thread_rng().gen_range(interval.min..interval.max)
     }
 
     pub fn clamp(&self, x: f64) -> f64 {
-    	if x < self.min {
-    		return self.min;
-    	}
-    	if x > self.max {
-    		return self.max;
-    	}
-    	x
+        if x < self.min {
+            return self.min;
+        }
+        if x > self.max {
+            return self.max;
+        }
+        x
     }
 }

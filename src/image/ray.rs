@@ -28,14 +28,18 @@ impl Ray {
         self.origin + self.direction * t
     }
 
-    pub fn color(&self, world: &HittableObjects) -> Color {
+    pub fn color(&self, depth: u32, world: &HittableObjects) -> Color {
+        if depth == 0 {
+            return Color::black();
+        }
         let mut rec = HitRecord::default();
         if world.hit(
             *self,
-            utility::Interval::from(0.0, utility::INFINITY),
+            utility::Interval::from(0.001, utility::INFINITY),
             &mut rec,
         ) {
-            return 0.5* (Color::from_unit_vector(rec.normal) + Color::white());
+            let direction = rec.normal + Vector::random_unit_vector();
+            return 0.5 * Ray::new(rec.p, direction).color(depth - 1, world);
         }
         let unit_direction = self.direction.unit_vector();
         let a = 0.5 * (unit_direction.y + 1.0);

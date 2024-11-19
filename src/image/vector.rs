@@ -1,5 +1,6 @@
 use crate::image::ray::Ray;
 use crate::image::utility;
+use crate::image::utility::Interval;
 use core::ops::{Add, Div, Mul, Sub};
 use image::Rgb;
 
@@ -34,8 +35,44 @@ impl Vector {
         }
     }
 
-    pub fn unit_vector(self) -> Self {
-        self / self.len()
+    pub fn unit_vector(&self) -> Self {
+        *self / self.len()
+    }
+
+    pub fn random() -> Self {
+        Self {
+            x: utility::random(),
+            y: utility::random(),
+            z: utility::random(),
+        }
+    }
+
+    pub fn random_interval(interval: Interval) -> Self {
+        Self {
+            x: Interval::random(interval),
+            y: Interval::random(interval),
+            z: Interval::random(interval),
+        }
+    }
+
+    pub fn random_unit_vector() -> Self {
+        while true {
+            let vector = Vector::random_interval(Interval::from(-1.0, 1.0));
+            let vector_len = vector.len_squared();
+            if 1e-160 < vector_len && vector_len <= 1.0 {
+                return vector.unit_vector();
+            }
+        }
+        Vector::random()
+    }
+
+    pub fn random_on_hemisphere(normal: Vector) -> Self {
+        let on_unit_sphere = Vector::random_unit_vector();
+        if on_unit_sphere.dot(normal) > 0.0 {
+            return on_unit_sphere;
+        } else {
+            return -1.0 * on_unit_sphere;
+        }
     }
 }
 
@@ -109,7 +146,11 @@ pub struct Color {
 
 impl Color {
     pub fn as_pixel(&self) -> Rgb<u8> {
-        Rgb([(self.r * 255.0) as u8, (self.g * 255.0) as u8, (self.b * 255.0) as u8])
+        let intensity = utility::Interval::from(0.000, 0.999);
+        let write_r = 256.0 * intensity.clamp(Self::linear_to_gamma(self.r));
+        let write_g = 256.0 * intensity.clamp(Self::linear_to_gamma(self.g));
+        let write_b = 256.0 * intensity.clamp(Self::linear_to_gamma(self.b));
+        Rgb([write_r as u8, write_g as u8, write_b as u8])
     }
 
     pub fn from_unit_vector(unit_vector: Vector) -> Self {
@@ -121,7 +162,11 @@ impl Color {
     }
 
     pub fn black() -> Self {
-        Self { r: 0.0, g: 0.0, b: 0.0 }
+        Self {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        }
     }
     pub fn white() -> Self {
         Self {
@@ -132,14 +177,33 @@ impl Color {
     }
 
     pub fn red() -> Self {
-        Self { r: 1.0, g: 0.0, b: 0.0 }
+        Self {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+        }
     }
 
     pub fn green() -> Self {
-        Self { r: 0.0, g: 1.0, b: 0.0 }
+        Self {
+            r: 0.0,
+            g: 1.0,
+            b: 0.0,
+        }
     }
     pub fn blue() -> Self {
-        Self { r: 0.0, g: 0.0, b: 1.0 }
+        Self {
+            r: 0.0,
+            g: 0.0,
+            b: 1.0,
+        }
+    }
+
+    fn linear_to_gamma(linear: f64) -> f64 {
+        if linear > 0.0 {
+            return linear.sqrt();
+        }
+        0.0
     }
 }
 
@@ -159,7 +223,7 @@ impl Mul<f64> for Color {
         Self {
             r: self.r * t,
             g: self.g * t,
-            b: self.b  * t,
+            b: self.b * t,
         }
     }
 }
