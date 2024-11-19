@@ -2,8 +2,8 @@ mod hittable;
 mod ray;
 mod utility;
 mod vector;
-use hittable::{HitRecord, Hittable, HittableObjects, Sphere};
-use image::{ImageBuffer, Rgb, RgbImage};
+use hittable::{Hittable, HittableObjects, Material, MaterialType, Sphere};
+use image::{ImageBuffer, RgbImage};
 use indicatif::ProgressBar;
 use ray::Ray;
 use vector::{Color, Vector};
@@ -121,22 +121,82 @@ impl Image {
 
     pub fn render(&mut self) {
         let pb = ProgressBar::new(self.image_height as u64);
-        self.world.add(Hittable::Sphere(Sphere::new(
-            Vector {
-                x: 0.0,
-                y: 0.0,
-                z: -1.0,
+        let material_ground = Material::new(
+            MaterialType::Lambertian,
+            Color {
+                r: 0.8,
+                g: 0.8,
+                b: 0.0,
             },
-            0.5,
-        )));
-        self.world.add(Hittable::Sphere(Sphere::new(
+            0.0,
+        );
+        let material_center = Material::new(
+            MaterialType::Lambertian,
+            Color {
+                r: 0.1,
+                g: 0.2,
+                b: 0.5,
+            },
+            0.0,
+        );
+        let material_left = Material::new(
+            MaterialType::Metal,
+            Color {
+                r: 0.8,
+                g: 0.8,
+                b: 0.8,
+            },
+            0.3,
+        );
+        let material_right = Material::new(
+            MaterialType::Metal,
+            Color {
+                r: 0.8,
+                g: 0.6,
+                b: 0.2,
+            },
+            1.0,
+        );
+        let hittable_ground = Hittable::Sphere(Sphere::new(
             Vector {
                 x: 0.0,
                 y: -100.5,
                 z: -1.0,
             },
             100.0,
-        )));
+            material_ground,
+        ));
+        let hittable_center = Hittable::Sphere(Sphere::new(
+            Vector {
+                x: 0.0,
+                y: 0.0,
+                z: -1.2,
+            },
+            0.5,
+            material_center,
+        ));
+        let hittable_left = Hittable::Sphere(Sphere::new(
+            Vector {
+                x: -1.0,
+                y: 0.0,
+                z: -1.0,
+            },
+            0.5,
+            material_left,
+        ));
+        let hittable_right = Hittable::Sphere(Sphere::new(
+            Vector {
+                x: 1.0,
+                y: 0.0,
+                z: -1.0,
+            },
+            0.5,
+            material_right,
+        ));
+        self.world.add(hittable_ground);
+        self.world.add(hittable_center);
+        self.world.add(hittable_left);
+        self.world.add(hittable_right);
 
         for i in 0..self.image_height {
             pb.inc(1);

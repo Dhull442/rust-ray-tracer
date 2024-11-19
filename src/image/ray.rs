@@ -38,8 +38,15 @@ impl Ray {
             utility::Interval::from(0.001, utility::INFINITY),
             &mut rec,
         ) {
-            let direction = rec.normal + Vector::random_unit_vector();
-            return 0.5 * Ray::new(rec.p, direction).color(depth - 1, world);
+            let mut ray_scattered = Ray::default();
+            let mut attenuation = Color::black();
+            if rec
+                .material
+                .scatter(self, &rec, &mut attenuation, &mut ray_scattered)
+            {
+                return attenuation * ray_scattered.color(depth - 1, world);
+            }
+            return Color::black();
         }
         let unit_direction = self.direction.unit_vector();
         let a = 0.5 * (unit_direction.y + 1.0);

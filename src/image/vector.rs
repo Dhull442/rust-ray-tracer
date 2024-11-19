@@ -1,4 +1,3 @@
-use crate::image::ray::Ray;
 use crate::image::utility;
 use crate::image::utility::Interval;
 use core::ops::{Add, Div, Mul, Sub};
@@ -56,23 +55,31 @@ impl Vector {
     }
 
     pub fn random_unit_vector() -> Self {
-        while true {
+        loop {
             let vector = Vector::random_interval(Interval::from(-1.0, 1.0));
             let vector_len = vector.len_squared();
             if 1e-160 < vector_len && vector_len <= 1.0 {
                 return vector.unit_vector();
             }
         }
-        Vector::random()
     }
 
-    pub fn random_on_hemisphere(normal: Vector) -> Self {
+    pub fn random_on_hemisphere(normal: Self) -> Self {
         let on_unit_sphere = Vector::random_unit_vector();
         if on_unit_sphere.dot(normal) > 0.0 {
             return on_unit_sphere;
         } else {
             return -1.0 * on_unit_sphere;
         }
+    }
+
+    pub fn near_zero(&self) -> bool {
+        let ep: f64 = 1e-8;
+        self.x.abs() < ep && self.y.abs() < ep && self.z.abs() < ep
+    }
+
+    pub fn reflect(&self, normal: Self) -> Self {
+        *self - 2.0 * self.dot(normal) * normal
     }
 }
 
@@ -232,5 +239,16 @@ impl Mul<Color> for f64 {
     type Output = Color;
     fn mul(self, other: Color) -> Color {
         other * self
+    }
+}
+
+impl Mul for Color {
+    type Output = Self;
+    fn mul(self, other: Self) -> Self {
+        Self {
+            r: self.r * other.r,
+            g: self.g * other.g,
+            b: self.b * other.b,
+        }
     }
 }
