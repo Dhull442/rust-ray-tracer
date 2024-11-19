@@ -1,8 +1,8 @@
 mod hittable;
 mod ray;
-mod utility;
+mod util;
 mod vector;
-use hittable::{Hittable, HittableObjects, Material, MaterialType, Sphere};
+use hittable::{Hittable, HittableObjects, Material};
 use image::{ImageBuffer, RgbImage};
 use indicatif::ProgressBar;
 use ray::Ray;
@@ -83,8 +83,8 @@ impl Camera {
 
     fn sample_square() -> Vector {
         Vector {
-            x: utility::random() - 0.5,
-            y: utility::random() - 0.5,
+            x: util::random() - 0.5,
+            y: util::random() - 0.5,
             z: 0.0,
         }
     }
@@ -121,78 +121,16 @@ impl Image {
 
     pub fn render(&mut self) {
         let pb = ProgressBar::new(self.image_height as u64);
-        let material_ground = Material::new(
-            MaterialType::Lambertian,
-            Color {
-                r: 0.8,
-                g: 0.8,
-                b: 0.0,
-            },
-            0.0,
-        );
-        let material_center = Material::new(
-            MaterialType::Lambertian,
-            Color {
-                r: 0.1,
-                g: 0.2,
-                b: 0.5,
-            },
-            0.0,
-        );
-        let material_left = Material::new(
-            MaterialType::Metal,
-            Color {
-                r: 0.8,
-                g: 0.8,
-                b: 0.8,
-            },
-            0.3,
-        );
-        let material_right = Material::new(
-            MaterialType::Metal,
-            Color {
-                r: 0.8,
-                g: 0.6,
-                b: 0.2,
-            },
-            1.0,
-        );
-        let hittable_ground = Hittable::Sphere(Sphere::new(
-            Vector {
-                x: 0.0,
-                y: -100.5,
-                z: -1.0,
-            },
-            100.0,
-            material_ground,
-        ));
-        let hittable_center = Hittable::Sphere(Sphere::new(
-            Vector {
-                x: 0.0,
-                y: 0.0,
-                z: -1.2,
-            },
-            0.5,
-            material_center,
-        ));
-        let hittable_left = Hittable::Sphere(Sphere::new(
-            Vector {
-                x: -1.0,
-                y: 0.0,
-                z: -1.0,
-            },
-            0.5,
-            material_left,
-        ));
-        let hittable_right = Hittable::Sphere(Sphere::new(
-            Vector {
-                x: 1.0,
-                y: 0.0,
-                z: -1.0,
-            },
-            0.5,
-            material_right,
-        ));
+        let material_ground = Material::new_lambertian(Color::new(0.8, 0.8, 0.0));
+        let material_center = Material::new_lambertian(Color::new(0.1, 0.2, 0.5));
+        let material_left = Material::new_dielectric(0.75);
+        let material_right = Material::new_metal(Color::new(0.8, 0.6, 0.2), 1.0);
+        let hittable_ground =
+            Hittable::new_sphere(Vector::new(0.0, -100.5, -1.0), 100.0, material_ground);
+        let hittable_center =
+            Hittable::new_sphere(Vector::new(0.0, 0.0, -1.2), 0.5, material_center);
+        let hittable_left = Hittable::new_sphere(Vector::new(-1.0, 0.0, -1.0), 0.5, material_left);
+        let hittable_right = Hittable::new_sphere(Vector::new(1.0, 0.0, -1.0), 0.5, material_right);
         self.world.add(hittable_ground);
         self.world.add(hittable_center);
         self.world.add(hittable_left);

@@ -1,5 +1,5 @@
 use crate::image::ray::Ray;
-use crate::image::utility;
+use crate::image::util;
 use crate::image::vector::{Color, Vector};
 
 #[derive(Default, Copy, Clone)]
@@ -7,6 +7,7 @@ pub enum MaterialType {
     #[default]
     Lambertian,
     Metal,
+    Dielectric,
 }
 
 #[derive(Default, Copy, Clone)]
@@ -14,14 +15,34 @@ pub struct Material {
     material: MaterialType,
     albedo: Color,
     fuzz: f64,
+    refraction_index: f64,
 }
 
 impl Material {
-    pub fn new(material: MaterialType, albedo: Color, fuzz: f64) -> Self {
+    pub fn new_lambertian(albedo: Color) -> Self {
         Self {
-            material: material,
+            material: MaterialType::Lambertian,
+            albedo: albedo,
+            fuzz: 0.0,
+            refraction_index: 0.0,
+        }
+    }
+
+    pub fn new_metal(albedo: Color, fuzz: f64) -> Self {
+        Self {
+            material: MaterialType::Metal,
             albedo: albedo,
             fuzz: fuzz.min(1.0),
+            refraction_index: 0.0,
+        }
+    }
+
+    pub fn new_dielectric(refraction_index: f64) -> Self {
+        Self {
+            material: MaterialType::Dielectric,
+            albedo: Color::white(),
+            fuzz: 0.0,
+            refraction_index: refraction_index,
         }
     }
     pub fn scatter(
@@ -37,6 +58,9 @@ impl Material {
             }
             MaterialType::Metal => {
                 return self.scatter_metal(ray_in, rec, attenuation, ray_scattered);
+            }
+            MaterialType::Dielectric => {
+                return self.scatter_dielectric(ray_in, rec, attenuation, ray_scattered);
             }
         }
     }
@@ -68,6 +92,32 @@ impl Material {
         *attenuation = self.albedo;
         ray_scattered.direction().dot(rec.normal) > 0.0
     }
+
+    pub fn scatter_dielectric(
+        &self,
+        ray_in: &Ray,
+        rec: &HitRecord,
+        attenuation: &mut Color,
+        ray_scattered: &mut Ray,
+    ) -> bool {
+        let ri = if rec.front_face {
+            1.0 / self.refraction_index
+        } else {
+            self.refraction_index
+        };
+        let unit_direction = ray_in.direction().unit_vector();
+        let cos_theta = (-1.0 * unit_direction.dot(rec.normal)).min(1.0);
+        let sin_theta = (1.0 - cos_theta.powf(2.0)).sqrt();
+        let cannot_refract = ri * sin_theta > 1.0;
+        let direction = if cannot_refract {
+            unit_direction.reflect(rec.normal)
+        } else {
+            unit_direction.refract(rec.normal, ri)
+        };
+        *attenuation = self.albedo;
+        *ray_scattered = Ray::new(rec.p, direction);
+        true
+    }
 }
 
 #[derive(Default)]
@@ -90,21 +140,27 @@ impl HitRecord {
     }
 }
 
-pub struct Sphere {
+enum HittableType {
+    Sphere,
+}
+
+pub struct Hittable {
+    hittable: HittableType,
     center: Vector,
     radius: f64,
     material: Material,
 }
 
-impl Sphere {
-    pub fn new(center: Vector, radius: f64, material: Material) -> Self {
+impl Hittable {
+    pub fn new_sphere(center: Vector, radius: f64, material: Material) -> Self {
         Self {
+            hittable: HittableType::Sphere,
             center: center,
             radius: radius,
             material: material,
         }
     }
-    pub fn hit(&self, ray: Ray, ray_t: utility::Interval, rec: &mut HitRecord) -> bool {
+    pub fn hit_sphere(&self, ray: Ray, ray_t: util::Interval, rec: &mut HitRecord) -> bool {
         let oc = self.center - ray.origin();
         let a = ray.direction().len_squared();
         let h = ray.direction().dot(oc);
@@ -128,13 +184,12 @@ impl Sphere {
         rec.material = self.material;
         true
     }
+    pub fn hit(&self, ray: Ray, ray_t: util::Interval, rec: &mut HitRecord) -> bool {
+        match self.hittable {
+            HittableType::Sphere => return self.hit_sphere(ray, ray_t, rec),
+        }
+    }
 }
-
-pub enum Hittable {
-    Sphere(Sphere),
-    NoneObject,
-}
-
 pub struct HittableObjects {
     objects: Vec<Hittable>,
 }
@@ -154,18 +209,13 @@ impl HittableObjects {
         self.objects.clear();
     }
 
-    pub fn hit(&self, ray: Ray, ray_t: utility::Interval, rec: &mut HitRecord) -> bool {
+    pub fn hit(&self, ray: Ray, ray_t: util::Interval, rec: &mut HitRecord) -> bool {
         let mut closest_so_far = ray_t.max;
         let mut hit_something = false;
         for object in self.objects.iter() {
-            match object {
-                Hittable::Sphere(sphere) => {
-                    if sphere.hit(ray, utility::Interval::from(ray_t.min, closest_so_far), rec) {
-                        closest_so_far = rec.t;
-                        hit_something = true;
-                    }
-                }
-                _ => {}
+            if object.hit(ray, util::Interval::from(ray_t.min, closest_so_far), rec) {
+                closest_so_far = rec.t;
+                hit_something = true;
             }
         }
         hit_something

@@ -1,5 +1,5 @@
-use crate::image::utility;
-use crate::image::utility::Interval;
+use crate::image::util;
+use crate::image::util::Interval;
 use core::ops::{Add, Div, Mul, Sub};
 use image::Rgb;
 
@@ -11,6 +11,9 @@ pub struct Vector {
 }
 
 impl Vector {
+    pub fn new(x: f64, y: f64, z: f64) -> Self {
+        Self { x: x, y: y, z: z }
+    }
     pub fn len(&self) -> f64 {
         self.len_squared().sqrt()
     }
@@ -39,11 +42,7 @@ impl Vector {
     }
 
     pub fn random() -> Self {
-        Self {
-            x: utility::random(),
-            y: utility::random(),
-            z: utility::random(),
-        }
+        Self::new(util::random(), util::random(), util::random())
     }
 
     pub fn random_interval(interval: Interval) -> Self {
@@ -80,6 +79,13 @@ impl Vector {
 
     pub fn reflect(&self, normal: Self) -> Self {
         *self - 2.0 * self.dot(normal) * normal
+    }
+
+    pub fn refract(&self, normal: Self, etai_over_etat: f64) -> Self {
+        let cos_theta = (-1.0 * (self.dot(normal))).min(1.0);
+        let ray_out_perp = etai_over_etat * (*self + (cos_theta * normal));
+        let ray_out_parallel = -1.0 * (1.0 - ray_out_perp.len_squared()).abs().sqrt() * normal;
+        ray_out_perp + ray_out_parallel
     }
 }
 
@@ -152,8 +158,12 @@ pub struct Color {
 }
 
 impl Color {
+    pub fn new(r: f64, g: f64, b: f64) -> Self {
+        Self { r: r, g: g, b: b }
+    }
+
     pub fn as_pixel(&self) -> Rgb<u8> {
-        let intensity = utility::Interval::from(0.000, 0.999);
+        let intensity = util::Interval::from(0.000, 0.999);
         let write_r = 256.0 * intensity.clamp(Self::linear_to_gamma(self.r));
         let write_g = 256.0 * intensity.clamp(Self::linear_to_gamma(self.g));
         let write_b = 256.0 * intensity.clamp(Self::linear_to_gamma(self.b));
@@ -161,49 +171,25 @@ impl Color {
     }
 
     pub fn from_unit_vector(unit_vector: Vector) -> Self {
-        Self {
-            r: unit_vector.x,
-            g: unit_vector.y,
-            b: unit_vector.z,
-        }
+        Self::new(unit_vector.x, unit_vector.y, unit_vector.z)
     }
 
     pub fn black() -> Self {
-        Self {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        }
+        Self::new(0.0, 0.0, 0.0)
     }
     pub fn white() -> Self {
-        Self {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-        }
+        Self::new(1.0, 1.0, 1.0)
     }
 
     pub fn red() -> Self {
-        Self {
-            r: 1.0,
-            g: 0.0,
-            b: 0.0,
-        }
+        Self::new(1.0, 0.0, 0.0)
     }
 
     pub fn green() -> Self {
-        Self {
-            r: 0.0,
-            g: 1.0,
-            b: 0.0,
-        }
+        Self::new(0.0, 1.0, 0.0)
     }
     pub fn blue() -> Self {
-        Self {
-            r: 0.0,
-            g: 0.0,
-            b: 1.0,
-        }
+        Self::new(0.0, 0.0, 1.0)
     }
 
     fn linear_to_gamma(linear: f64) -> f64 {

@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 mod image;
 use image::Image;
 fn main() {
