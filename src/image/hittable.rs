@@ -109,7 +109,7 @@ impl Material {
         let cos_theta = (-1.0 * unit_direction.dot(rec.normal)).min(1.0);
         let sin_theta = (1.0 - cos_theta.powf(2.0)).sqrt();
         let cannot_refract = ri * sin_theta > 1.0;
-        let direction = if cannot_refract {
+        let direction = if cannot_refract || Self::reflectance(cos_theta, ri) > util::random() {
             unit_direction.reflect(rec.normal)
         } else {
             unit_direction.refract(rec.normal, ri)
@@ -117,6 +117,11 @@ impl Material {
         *attenuation = self.albedo;
         *ray_scattered = Ray::new(rec.p, direction);
         true
+    }
+
+    fn reflectance(cosine: f64, ri: f64) -> f64 {
+        let r0 = ((1.0 - ri) / (1.0 + ri)).powf(2.0);
+        r0 + (1.0 - r0) * (1.0 - cosine).powf(5.0)
     }
 }
 

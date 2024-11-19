@@ -6,7 +6,7 @@ pub const PI: f64 = 3.1415926535897932385;
 
 // Utility Functions
 pub fn degree_to_radians(degree: f64) -> f64 {
-    return degree * PI / 180.0;
+    return (degree * PI) / 180.0;
 }
 
 pub fn random() -> f64 {
