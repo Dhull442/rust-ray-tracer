@@ -65,29 +65,29 @@ impl Camera {
         let defocus_disk_u = u * defocus_radius;
         let defocus_dish_v = v * defocus_radius;
         Self {
-            viewport_height: viewport_height,
-            viewport_width: viewport_width,
-            center: center,
-            viewport_u: viewport_u,
-            viewport_v: viewport_v,
-            pixel_delta_u: pixel_delta_u,
-            pixel_delta_v: pixel_delta_v,
-            viewport_upper_left: viewport_upper_left,
-            pixel00_loc: pixel00_loc,
-            sample_per_pixel: sample_per_pixel,
+            viewport_height,
+            viewport_width,
+            center,
+            viewport_u,
+            viewport_v,
+            pixel_delta_u,
+            pixel_delta_v,
+            viewport_upper_left,
+            pixel00_loc,
+            sample_per_pixel,
             pixel_sample_scale: 1.0 / sample_per_pixel as f64,
-            max_depth: max_depth,
-            vfov: vfov,
-            lookfrom: lookfrom,
-            lookat: lookat,
-            vup: vup,
-            w: w,
-            u: u,
-            v: v,
-            defocus_angle: defocus_angle,
-            focus_dist: focus_dist,
-            defocus_disk_u: defocus_disk_u,
-            defocus_dish_v: defocus_dish_v,
+            max_depth,
+            vfov,
+            lookfrom,
+            lookat,
+            vup,
+            w,
+            u,
+            v,
+            defocus_angle,
+            focus_dist,
+            defocus_disk_u,
+            defocus_dish_v,
         }
     }
 
@@ -127,19 +127,19 @@ impl Image {
     pub fn new(aspect_ratio: f64, image_width: u32, sample_per_pixel: u32, max_depth: u32) -> Self {
         let image_height = (image_width as f64 / aspect_ratio) as u32;
         Self {
-            aspect_ratio: aspect_ratio,
-            image_width: image_width,
-            image_height: image_height,
+            aspect_ratio,
+            image_width,
+            image_height,
             camera: Camera::new(
                 image_width as f64,
                 image_height as f64,
                 sample_per_pixel,
                 max_depth,
-                53.0,
-                Vector::new(0.0, 5.0, 5.0),
-                Vector::new(0.0, 0.0, -1.0),
+                60.0,
+                Vector::new(13.0, 2.0, 3.0),
+                Vector::new(0.0, 2.0, 0.0),
                 Vector::new(0.0, 1.0, 0.0),
-                2.0,
+                0.6,
                 10.0,
             ),
             buffer: ImageBuffer::new(image_width, image_height),
@@ -147,26 +147,52 @@ impl Image {
         }
     }
 
+    fn create_scene(&mut self) {
+        let ground_material = Material::new_lambertian(Color::new(0.5,0.5,0.5));
+        let ground_hittable = Hittable::new_sphere(Vector::new(0.0,-1000.0,0.0),1000.0,ground_material);
+        self.world.add(ground_hittable);
+
+        for a in -2..2 {
+            for b in -2..2 {
+                let choose_mat = util::random();
+                let center = Vector::new(a as f64 + 0.9* util::random(), 0.2, b as f64 +0.9*util::random());
+                if (center - Vector::new(4.0,0.2,0.0)).len() > 0.9 {
+                    if choose_mat < 0.8 {
+                        // lambertian
+                        let sphere_material = Material::new_lambertian(Color::random());
+                        let sphere_hittable = Hittable::new_sphere(center, 0.2, sphere_material);
+                        self.world.add(sphere_hittable);
+                    } else if choose_mat < 0.95 {
+                        // metal
+                        let sphere_material = Material::new_metal(Color::random_interval(0.5,1.0),  util::random_interval(0.0,0.5));
+                        let sphere_hittable = Hittable::new_sphere(center, 0.2, sphere_material);
+                        self.world.add(sphere_hittable);
+                    } else {
+                        // dielectric
+                        let sphere_material = Material::new_dielectric(1.5);
+                        let sphere_hittable = Hittable::new_sphere(center, 0.2, sphere_material);
+                        self.world.add(sphere_hittable);
+                    }
+                }
+            }
+        }
+
+        let material_1 = Material::new_dielectric(1.5);
+        let hittable_1 = Hittable::new_sphere(Vector::new(0.0,1.0,0.0),1.0,material_1);
+        self.world.add(hittable_1);
+
+        let material_2 = Material::new_lambertian(Color::new(0.4,0.2,0.1));
+        let hittable_2 = Hittable::new_sphere(Vector::new(-4.0,1.0,0.0),1.0,material_2);
+        self.world.add(hittable_2);
+
+        let material_3 = Material::new_metal(Color::new(0.7,0.6,0.5),0.0);
+        let hittable_3 = Hittable::new_sphere(Vector::new(4.0,1.0,0.0),1.0,material_3);
+        self.world.add(hittable_3);
+    }
+
     pub fn render(&mut self) {
+        self.create_scene();
         let pb = ProgressBar::new((self.image_height * self.image_width) as u64);
-        let material_ground = Material::new_lambertian(Color::new(0.8, 0.8, 0.0));
-        let material_center = Material::new_lambertian(Color::new(0.1, 0.2, 0.5));
-        let material_left = Material::new_dielectric(1.5);
-        let material_bubble = Material::new_dielectric(1.0 / 1.5);
-        let material_right = Material::new_metal(Color::new(0.8, 0.6, 0.2), 1.0);
-        let hittable_ground =
-            Hittable::new_sphere(Vector::new(0.0, -100.5, -1.0), 100.0, material_ground);
-        let hittable_center =
-            Hittable::new_sphere(Vector::new(0.0, 0.0, -1.2), 0.5, material_center);
-        let hittable_left = Hittable::new_sphere(Vector::new(-1.0, 0.0, -1.0), 0.5, material_left);
-        let hittable_bubble =
-            Hittable::new_sphere(Vector::new(-1.0, 0.0, -1.0), 0.3, material_bubble);
-        let hittable_right = Hittable::new_sphere(Vector::new(1.0, 0.0, -1.0), 0.5, material_right);
-        self.world.add(hittable_ground);
-        self.world.add(hittable_center);
-        self.world.add(hittable_left);
-        self.world.add(hittable_bubble);
-        self.world.add(hittable_right);
 
         for i in 0..self.image_height {
             for j in 0..self.image_width {

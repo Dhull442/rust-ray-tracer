@@ -11,8 +11,8 @@ pub struct Ray {
 impl Ray {
     pub fn new(origin: Vector, direction: Vector) -> Self {
         Self {
-            origin: origin,
-            direction: direction,
+            origin,
+            direction,
         }
     }
 
@@ -33,7 +33,7 @@ impl Ray {
             return Color::black();
         }
         let mut rec = HitRecord::default();
-        if world.hit(*self, util::Interval::from(0.001, util::INFINITY), &mut rec) {
+        if world.hit(*self, util::Interval::from(0.001, f64::INFINITY), &mut rec) {
             let mut ray_scattered = Ray::default();
             let mut attenuation = Color::black();
             if rec

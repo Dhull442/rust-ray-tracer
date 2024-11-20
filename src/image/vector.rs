@@ -1,5 +1,4 @@
-use crate::image::util;
-use crate::image::util::Interval;
+use crate::image::util::{Interval,random_interval,random};
 use core::ops::{Add, Div, Mul, Sub};
 use image::Rgb;
 
@@ -12,7 +11,7 @@ pub struct Vector {
 
 impl Vector {
     pub fn new(x: f64, y: f64, z: f64) -> Self {
-        Self { x: x, y: y, z: z }
+        Self { x, y, z }
     }
     pub fn len(&self) -> f64 {
         self.len_squared().sqrt()
@@ -42,45 +41,32 @@ impl Vector {
     }
 
     pub fn random() -> Self {
-        Self::new(util::random(), util::random(), util::random())
+        Self::new(random(), random(),random())
     }
 
-    pub fn random_interval(interval: Interval) -> Self {
-        Self {
-            x: Interval::random(interval),
-            y: Interval::random(interval),
-            z: Interval::random(interval),
-        }
+    pub fn random_interval(min:f64, max:f64) -> Self {
+        Self::new(random_interval(min,max),random_interval(min,max),random_interval(min,max))
     }
 
     pub fn random_unit_vector() -> Self {
-        loop {
-            let vector = Vector::random_interval(Interval::from(-1.0, 1.0));
-            let vector_len = vector.len_squared();
-            if 1e-160 < vector_len && vector_len <= 1.0 {
-                return vector.unit_vector();
-            }
-        }
+        let theta = 2.0 * std::f64::consts::PI * random();
+        let z = random_interval(-1.0,1.0);
+        let r = (1.0 - z.powf(2.0)).sqrt();
+        Self::new(r*f64::cos(theta),r*f64::sin(theta),z)
     }
 
     pub fn random_on_hemisphere(normal: Self) -> Self {
         let on_unit_sphere = Vector::random_unit_vector();
         if on_unit_sphere.dot(normal) > 0.0 {
-            return on_unit_sphere;
+            on_unit_sphere
         } else {
-            return -1.0 * on_unit_sphere;
+            -1.0 * on_unit_sphere
         }
     }
 
     pub fn random_in_unit_disk() -> Self{
-        loop {
-            let mut vector = Vector::random_interval(Interval::from(-1.0,1.0));
-            vector.z = 0.0;
-            if vector.len_squared() < 1.0 {
-                return vector;
-            }
-
-        }
+        let theta = 2.0 * std::f64::consts::PI * random();
+        Self::new(f64::cos(theta),f64::sin(theta),0.0)
     }
 
     pub fn near_zero(&self) -> bool {
@@ -171,11 +157,11 @@ pub struct Color {
 
 impl Color {
     pub fn new(r: f64, g: f64, b: f64) -> Self {
-        Self { r: r, g: g, b: b }
+        Self { r, g, b }
     }
 
     pub fn as_pixel(&self) -> Rgb<u8> {
-        let intensity = util::Interval::from(0.000, 0.999);
+        let intensity = Interval::from(0.000, 0.999);
         let write_r = 256.0 * intensity.clamp(Self::linear_to_gamma(self.r));
         let write_g = 256.0 * intensity.clamp(Self::linear_to_gamma(self.g));
         let write_b = 256.0 * intensity.clamp(Self::linear_to_gamma(self.b));
@@ -209,6 +195,14 @@ impl Color {
             return linear.sqrt();
         }
         0.0
+    }
+
+    pub fn random() -> Self{
+        Self::new(random(), random(), random())
+    }
+
+    pub fn random_interval(min: f64, max: f64) -> Self{
+        Self::new(random_interval(min,max),random_interval(min,max),random_interval(min,max))
     }
 }
 

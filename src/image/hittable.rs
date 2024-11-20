@@ -22,7 +22,7 @@ impl Material {
     pub fn new_lambertian(albedo: Color) -> Self {
         Self {
             material: MaterialType::Lambertian,
-            albedo: albedo,
+            albedo,
             fuzz: 0.0,
             refraction_index: 0.0,
         }
@@ -31,7 +31,7 @@ impl Material {
     pub fn new_metal(albedo: Color, fuzz: f64) -> Self {
         Self {
             material: MaterialType::Metal,
-            albedo: albedo,
+            albedo,
             fuzz: fuzz.min(1.0),
             refraction_index: 0.0,
         }
@@ -42,7 +42,7 @@ impl Material {
             material: MaterialType::Dielectric,
             albedo: Color::white(),
             fuzz: 0.0,
-            refraction_index: refraction_index,
+            refraction_index,
         }
     }
     pub fn scatter(
@@ -54,13 +54,13 @@ impl Material {
     ) -> bool {
         match self.material {
             MaterialType::Lambertian => {
-                return self.scatter_lambertian(ray_in, rec, attenuation, ray_scattered);
+                self.scatter_lambertian(ray_in, rec, attenuation, ray_scattered)
             }
             MaterialType::Metal => {
-                return self.scatter_metal(ray_in, rec, attenuation, ray_scattered);
+                self.scatter_metal(ray_in, rec, attenuation, ray_scattered)
             }
             MaterialType::Dielectric => {
-                return self.scatter_dielectric(ray_in, rec, attenuation, ray_scattered);
+                self.scatter_dielectric(ray_in, rec, attenuation, ray_scattered)
             }
         }
     }
@@ -160,9 +160,9 @@ impl Hittable {
     pub fn new_sphere(center: Vector, radius: f64, material: Material) -> Self {
         Self {
             hittable: HittableType::Sphere,
-            center: center,
-            radius: radius,
-            material: material,
+            center,
+            radius,
+            material,
         }
     }
     pub fn hit_sphere(&self, ray: Ray, ray_t: util::Interval, rec: &mut HitRecord) -> bool {
@@ -191,7 +191,7 @@ impl Hittable {
     }
     pub fn hit(&self, ray: Ray, ray_t: util::Interval, rec: &mut HitRecord) -> bool {
         match self.hittable {
-            HittableType::Sphere => return self.hit_sphere(ray, ray_t, rec),
+            HittableType::Sphere => self.hit_sphere(ray, ray_t, rec),
         }
     }
 }
