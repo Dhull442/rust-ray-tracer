@@ -135,9 +135,9 @@ impl Image {
                 image_height as f64,
                 sample_per_pixel,
                 max_depth,
-                60.0,
+                20.0,
                 Vector::new(13.0, 2.0, 3.0),
-                Vector::new(0.0, 2.0, 0.0),
+                Vector::new(0.0, 0.0, 0.0),
                 Vector::new(0.0, 1.0, 0.0),
                 0.6,
                 10.0,
@@ -152,8 +152,8 @@ impl Image {
         let ground_hittable = Hittable::new_sphere(Vector::new(0.0,-1000.0,0.0),1000.0,ground_material);
         self.world.add(ground_hittable);
 
-        for a in -2..2 {
-            for b in -2..2 {
+        for a in -10..10 {
+            for b in -10..10 {
                 let choose_mat = util::random();
                 let center = Vector::new(a as f64 + 0.9* util::random(), 0.2, b as f64 +0.9*util::random());
                 if (center - Vector::new(4.0,0.2,0.0)).len() > 0.9 {
@@ -192,8 +192,7 @@ impl Image {
 
     pub fn render(&mut self) {
         self.create_scene();
-        let pb = ProgressBar::new((self.image_height * self.image_width) as u64);
-
+        let pb = ProgressBar::new((self.image_height) as u64);
         for i in 0..self.image_height {
             for j in 0..self.image_width {
                 let mut pixel_color = Color::black();
@@ -206,8 +205,9 @@ impl Image {
                                 .color(self.camera.max_depth, &self.world);
                 }
                 self.buffer.put_pixel(j, i, pixel_color.as_pixel());
-                pb.inc(1);
             }
+            pb.inc(1);
+            // self.buffer.save("proc_image.png").unwrap();
         }
         self.buffer.save("image.png").unwrap();
         self.world.clear();

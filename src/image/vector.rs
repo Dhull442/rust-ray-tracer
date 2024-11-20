@@ -32,7 +32,7 @@ impl Vector {
         Self {
             x: self.y * other.z - self.z * other.y,
             y: self.z * other.x - self.x * other.z,
-            z: self.x * other.y - self.z * other.x,
+            z: self.x * other.y - self.y * other.x,
         }
     }
 
