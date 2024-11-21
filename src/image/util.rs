@@ -21,17 +21,16 @@ pub struct Interval {
 }
 
 impl Interval {
-    pub fn new() -> Self {
-        Self {
-            min: -f64::INFINITY,
-            max: f64::INFINITY,
-        }
-    }
-
-    pub fn from(min: f64, max: f64) -> Self {
+    pub fn new(min: f64, max: f64) -> Self {
         Self { min, max }
     }
 
+    pub fn new_from_interval(a: Self, b: Self)-> Self{
+        Self{
+            min: a.min.min(b.min),
+            max: a.max.max(b.max),
+        }
+    }
     pub fn size(&self) -> f64 {
         self.max - self.min
     }
@@ -66,5 +65,10 @@ impl Interval {
             return self.max;
         }
         x
+    }
+
+    pub fn expand(&self, delta: f64)-> Self{
+        let pad = delta/2.0;
+        Self::new(self.min - pad, self.max+pad)
     }
 }

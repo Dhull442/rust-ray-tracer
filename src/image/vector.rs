@@ -10,6 +10,10 @@ pub struct Vector {
 }
 
 impl Vector {
+    pub fn zero() -> Self{
+        Self::new(0.0, 0.0,0.0)
+    }
+
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
@@ -83,6 +87,17 @@ impl Vector {
         let ray_out_perp = etai_over_etat * (*self + (cos_theta * normal));
         let ray_out_parallel = -1.0 * (1.0 - ray_out_perp.len_squared()).abs().sqrt() * normal;
         ray_out_perp + ray_out_parallel
+    }
+
+
+    pub fn axis(&self, n: u64) -> f64 {
+        if n == 0 {
+            self.x
+        } else if n==1 {
+            self.y
+        } else {
+            self.z
+        }
     }
 
 }
@@ -161,7 +176,7 @@ impl Color {
     }
 
     pub fn as_pixel(&self) -> Rgb<u8> {
-        let intensity = Interval::from(0.000, 0.999);
+        let intensity = Interval::new(0.000, 0.999);
         let write_r = 256.0 * intensity.clamp(Self::linear_to_gamma(self.r));
         let write_g = 256.0 * intensity.clamp(Self::linear_to_gamma(self.g));
         let write_b = 256.0 * intensity.clamp(Self::linear_to_gamma(self.b));

@@ -7,6 +7,7 @@ use image::{ImageBuffer, RgbImage};
 use indicatif::ProgressBar;
 use ray::Ray;
 use vector::{Color, Vector};
+use crate::image::hittable::BvhNode;
 
 pub struct Camera {
     viewport_width: f64,
@@ -101,7 +102,8 @@ impl Camera {
         } else {
             self.defocus_disk_sample()
         };
-        Ray::new(ray_origin, pixel_sample - ray_origin)
+        let ray_time = util::random();
+        Ray::new_time(ray_origin, pixel_sample - ray_origin, ray_time)
     }
 
     fn defocus_disk_sample(&self) -> Vector {
@@ -160,7 +162,8 @@ impl Image {
                     if choose_mat < 0.8 {
                         // lambertian
                         let sphere_material = Material::new_lambertian(Color::random());
-                        let sphere_hittable = Hittable::new_sphere(center, 0.2, sphere_material);
+                        let center2 = center + Vector::new(0.0, util::random_interval(0.0,0.5),0.0);
+                        let sphere_hittable = Hittable::new_moving_sphere(center, center2, 0.2, sphere_material);
                         self.world.add(sphere_hittable);
                     } else if choose_mat < 0.95 {
                         // metal
@@ -193,6 +196,7 @@ impl Image {
     pub fn render(&mut self) {
         self.create_scene();
         let pb = ProgressBar::new((self.image_height) as u64);
+        let bvhWorld = BvhNode::new(&self.world);
         for i in 0..self.image_height {
             for j in 0..self.image_width {
                 let mut pixel_color = Color::black();
@@ -202,7 +206,7 @@ impl Image {
                             * self
                                 .camera
                                 .get_ray(j, i)
-                                .color(self.camera.max_depth, &self.world);
+                                .color(self.camera.max_depth, &bvhWorld);
                 }
                 self.buffer.put_pixel(j, i, pixel_color.as_pixel());
             }
