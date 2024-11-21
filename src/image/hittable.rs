@@ -1,17 +1,17 @@
 use std::cmp::Ordering;
-use std::ptr::null;
 use crate::image::ray::Ray;
 use crate::image::util;
-use crate::image::vector::{Color, Vector};
+use crate::image::vector::{Vector};
 mod aabb;
 use aabb::AABB;
 pub mod material;
 pub use material::{Material, HitRecord};
-#[derive(Clone)]
+#[derive(Default,Clone)]
 enum HittableType {
+    #[default]
     Sphere,
 }
-#[derive(Clone)]
+#[derive(Default,Clone)]
 pub struct Hittable {
     hittable: HittableType,
     center: Ray,
@@ -118,11 +118,12 @@ impl HittableObjects {
         hit_something
     }
 }
-
+enum BVH{
+    Node{left: BvhNode, right: BvhNode},
+    Leaf{hittable: Hittable},
+}
 pub struct BvhNode {
-    hittable: Hittable,
-    left: *mut BvhNode,
-    right: *mut BvhNode,
+    content: Box<BVH>,
     bbox: AABB,
 }
 
@@ -135,15 +136,12 @@ impl BvhNode{
     pub fn new_from_object(hittable: Hittable) -> Self{
         Self{
             bbox: hittable.bounding_box(),
-            hittable,
-            left: None,
-            right: null(),
+            content: Box::new(BVH::Leaf{hittable}),
         }
     }
     pub fn new_from_objects(list: &Vec<Hittable>, start: usize, end: usize) -> Self{
-        let left: *mut BvhNode;
-        let right: *mut BvhNode;
-        let hittable: Hittable;
+        let left: BvhNode;
+        let right: BvhNode;
         let axis = util::random_interval(0.0, 3.0) as u64;
         let comparator = if axis == 0 {
             Self::box_x_compare
@@ -156,28 +154,18 @@ impl BvhNode{
         if object_span == 1 {
             return Self::new_from_object(list[start].clone());
         } else if object_span == 2 {
-            hittable = list[start].clone();
-            left = &Self::new_from_object(list[start+1].clone());
-            right = null();
-        } else if object_span == 3  {
-            hittable = list[start].clone();
-            left = &Self::new_from_object(list[start+1].clone());
-            right = &Self::new_from_object(list[start+2].clone());
+            left = Self::new_from_object(list[start].clone());
+            right = Self::new_from_object(list[start+1].clone());
         } else {
             let mut sublist = list[start..end].to_vec();
             sublist.sort_by(|a,b| comparator(a,b));
             let mid = start + object_span / 2;
-            hittable = sublist[mid-start].clone();
-            left = &Self::new_from_objects(&sublist, 0, mid-start);
-            right = &Self::new_from_objects(&sublist, mid-start+1, end-start);
+            left = Self::new_from_objects(&sublist, 0, mid-start);
+            right = Self::new_from_objects(&sublist, mid-start, end-start);
         }
-
-        let bbox = AABB::new_from_aabb(*left.bounding_box(), *right.bounding_box());
-
+        let bbox = AABB::new_from_aabb(&left.bounding_box(), &right.bounding_box());
         Self{
-            hittable,
-            left,
-            right,
+            content: Box::new(BVH::Node{left,right}),
             bbox,
         }
 
@@ -201,11 +189,10 @@ impl BvhNode{
         if !self.bbox.hit(ray, ray_t) {
             return false;
         }
-
-        let hit_left = self.left.hit(ray, *ray_t, rec);
-        let hit_right = self.right.hit(ray, util::Interval::new(ray_t.min, if hit_left {rec.t} else {ray_t.max}), rec);
-
-        hit_left || hit_right
+        match &*self.content {
+            BVH::Leaf{hittable} => {return hittable.hit(&ray, *ray_t,rec);},
+            BVH::Node {left, right} => {return left.hit(&ray,ray_t,rec) || right.hit(&ray,ray_t,rec);},
+        }
     }
 
     pub fn bounding_box(&self) -> AABB{

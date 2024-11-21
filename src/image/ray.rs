@@ -1,4 +1,4 @@
-use crate::image::hittable::{BvhNode, HittableObjects};
+use crate::image::hittable::{BvhNode};
 use crate::image::hittable::material::HitRecord;
 use crate::image::util;
 use crate::image::vector::{Color, Vector};

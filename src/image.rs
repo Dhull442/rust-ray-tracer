@@ -196,7 +196,7 @@ impl Image {
     pub fn render(&mut self) {
         self.create_scene();
         let pb = ProgressBar::new((self.image_height) as u64);
-        let bvhWorld = BvhNode::new(&self.world);
+        let bvh_world = BvhNode::new(&self.world);
         for i in 0..self.image_height {
             for j in 0..self.image_width {
                 let mut pixel_color = Color::black();
@@ -206,7 +206,7 @@ impl Image {
                             * self
                                 .camera
                                 .get_ray(j, i)
-                                .color(self.camera.max_depth, &bvhWorld);
+                                .color(self.camera.max_depth, &bvh_world);
                 }
                 self.buffer.put_pixel(j, i, pixel_color.as_pixel());
             }
