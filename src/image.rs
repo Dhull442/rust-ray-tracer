@@ -7,7 +7,6 @@ use image::{ImageBuffer, RgbImage};
 use indicatif::ProgressBar;
 use ray::Ray;
 use vector::{Color, Vector};
-use crate::image::hittable::BvhNode;
 
 pub struct Camera {
     viewport_width: f64,
@@ -196,7 +195,7 @@ impl Image {
     pub fn render(&mut self) {
         self.create_scene();
         let pb = ProgressBar::new((self.image_height) as u64);
-        let bvh_world = BvhNode::new(&self.world);
+        // let bvh_world = BvhNode::new(&self.world);
         for i in 0..self.image_height {
             for j in 0..self.image_width {
                 let mut pixel_color = Color::black();
@@ -206,7 +205,7 @@ impl Image {
                             * self
                                 .camera
                                 .get_ray(j, i)
-                                .color(self.camera.max_depth, &bvh_world);
+                                .color(self.camera.max_depth, &self.world);
                 }
                 self.buffer.put_pixel(j, i, pixel_color.as_pixel());
             }

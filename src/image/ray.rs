@@ -1,4 +1,4 @@
-use crate::image::hittable::{BvhNode};
+use crate::image::hittable::{HittableObjects};
 use crate::image::hittable::material::HitRecord;
 use crate::image::util;
 use crate::image::vector::{Color, Vector};
@@ -42,12 +42,12 @@ impl Ray {
         self.origin + self.direction * t
     }
 
-    pub fn color(&self, depth: u32, world: &BvhNode) -> Color {
+    pub fn color(&self, depth: u32, world: &HittableObjects) -> Color {
         if depth == 0 {
             return Color::black();
         }
         let mut rec = HitRecord::default();
-        if world.hit(self, &mut util::Interval::new(0.001, f64::INFINITY), &mut rec) {
+        if world.hit(self, util::Interval::new(0.001, f64::INFINITY), &mut rec) {
             let mut ray_scattered = Ray::default();
             let mut attenuation = Color::black();
             if rec
