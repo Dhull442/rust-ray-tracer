@@ -132,6 +132,8 @@ pub struct HitRecord {
     pub normal: Vector,
     pub front_face: bool,
     pub material: Material,
+    pub u: f64,
+    pub v: f64,
 }
 
 impl HitRecord {

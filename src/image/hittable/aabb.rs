@@ -15,6 +15,11 @@ impl AABB{
 		}
 	}
 
+	pub fn longest_axis(&self) -> usize{
+		if self.x.size() >= self.y.size() && self.z.size() >= self.x.size() {return 0;}
+		else if self.y.size() >= self.x.size() && self.y.size() >= self.z.size(){ return 1;}
+		else { return 2; }
+	}
 	pub fn new_from_vector(a: Vector, b: Vector) -> Self{
 		Self::new(Interval::new(a.x.min(b.x), a.x.max(b.x)), Interval::new(a.y.min(b.y), a.y.max(b.y)), Interval::new(a.z.min(b.z), a.z.max(b.z)))
 	}
@@ -66,5 +71,13 @@ impl AABB{
 		}
 
 		true
+	}
+
+	pub fn empty()->Self{
+		Self::new(Interval::empty(), Interval::empty(), Interval::empty())
+	}
+
+	pub fn universe() -> Self{
+		Self::new(Interval::universe(), Interval::universe(), Interval::universe())
 	}
 }

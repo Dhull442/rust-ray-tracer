@@ -10,3 +10,4 @@ Demo Render: <br>
 
 
 [Guide](https://raytracing.github.io/books/RayTracingInOneWeekend.html#outputanimage)
+[Guide2](https://raytracing.github.io/books/RayTracingTheNextWeek.html#overview)

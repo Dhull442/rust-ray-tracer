@@ -5,6 +5,8 @@ use crate::image::vector::{Vector};
 mod aabb;
 use aabb::AABB;
 pub mod material;
+mod texture;
+
 pub use material::{Material, HitRecord};
 #[derive(Default,Clone)]
 enum HittableType {
