@@ -10,7 +10,7 @@ pub fn random() -> f64 {
     rand::thread_rng().gen_range(0.0..1.0)
 }
 
-pub fn random_interval(min: f64, max: f64) -> f64{
+pub fn random_interval(min: f64, max: f64) -> f64 {
     rand::thread_rng().gen_range(min..max)
 }
 
@@ -25,8 +25,8 @@ impl Interval {
         Self { min, max }
     }
 
-    pub fn new_from_interval(a: Self, b: Self)-> Self{
-        Self{
+    pub fn new_from_interval(a: Self, b: Self) -> Self {
+        Self {
             min: a.min.min(b.min),
             max: a.max.max(b.max),
         }
@@ -67,8 +67,12 @@ impl Interval {
         x
     }
 
-    pub fn expand(&self, delta: f64)-> Self{
-        let pad = delta/2.0;
-        Self::new(self.min - pad, self.max+pad)
+    pub fn expand(&self, delta: f64) -> Self {
+        let pad = delta / 2.0;
+        Self::new(self.min - pad, self.max + pad)
+    }
+
+    pub fn debug(&self) -> String {
+        format!("<{} {}>", self.min, self.max)
     }
 }

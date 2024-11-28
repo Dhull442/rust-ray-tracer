@@ -1,5 +1,5 @@
-use crate::image::hittable::{HittableObjects};
 use crate::image::hittable::material::HitRecord;
+use crate::image::hittable::HittableObjects;
 use crate::image::util;
 use crate::image::vector::{Color, Vector};
 
@@ -19,8 +19,8 @@ impl Ray {
         }
     }
 
-    pub fn new_time(origin: Vector, direction: Vector, time: f64) -> Self{
-        Self{
+    pub fn new_time(origin: Vector, direction: Vector, time: f64) -> Self {
+        Self {
             origin,
             direction,
             time,
@@ -35,7 +35,7 @@ impl Ray {
         self.direction
     }
 
-    pub fn time(&self) -> f64{
+    pub fn time(&self) -> f64 {
         self.time
     }
     pub fn at(&self, t: f64) -> Vector {
@@ -47,7 +47,8 @@ impl Ray {
             return Color::black();
         }
         let mut rec = HitRecord::default();
-        if world.hit(self, util::Interval::new(0.001, f64::INFINITY), &mut rec) {
+        let interval = util::Interval::new(0.001, f64::INFINITY);
+        if world.hit(self, interval, &mut rec) {
             let mut ray_scattered = Ray::default();
             let mut attenuation = Color::black();
             if rec

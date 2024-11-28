@@ -2,6 +2,6 @@
 mod image;
 use image::Image;
 fn main() {
-    let mut image = Image::new(16.0 / 9.0, 400, 100, 20);
+    let mut image = Image::new(16.0 / 9.0, 400, 10, 20);
     image.render();
 }

@@ -2,6 +2,7 @@ mod hittable;
 mod ray;
 mod util;
 mod vector;
+use crate::image::hittable::texture::Texture;
 use hittable::{Hittable, HittableObjects, Material};
 use image::{ImageBuffer, RgbImage};
 use indicatif::ProgressBar;
@@ -30,8 +31,8 @@ pub struct Camera {
     w: Vector,
     defocus_angle: f64,
     focus_dist: f64,
-    defocus_disk_u : Vector,
-    defocus_dish_v : Vector,
+    defocus_disk_u: Vector,
+    defocus_dish_v: Vector,
 }
 
 impl Camera {
@@ -45,7 +46,7 @@ impl Camera {
         lookat: Vector,
         vup: Vector,
         defocus_angle: f64,
-        focus_dist: f64
+        focus_dist: f64,
     ) -> Self {
         let center = lookfrom;
         let theta = util::degree_to_radians(vfov);
@@ -61,7 +62,7 @@ impl Camera {
         let pixel_delta_v = viewport_v / image_height;
         let viewport_upper_left = center - (focus_dist * w) - viewport_u / 2.0 - viewport_v / 2.0;
         let pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
-        let defocus_radius = focus_dist * f64::tan(util::degree_to_radians(defocus_angle/2.0));
+        let defocus_radius = focus_dist * f64::tan(util::degree_to_radians(defocus_angle / 2.0));
         let defocus_disk_u = u * defocus_radius;
         let defocus_dish_v = v * defocus_radius;
         Self {
@@ -111,7 +112,7 @@ impl Camera {
     }
 
     fn sample_square() -> Vector {
-        Vector::new(util::random() - 0.5,util::random() - 0.5,0.0)
+        Vector::new(util::random() - 0.5, util::random() - 0.5, 0.0)
     }
 }
 
@@ -137,36 +138,84 @@ impl Image {
                 sample_per_pixel,
                 max_depth,
                 20.0,
-                Vector::new(13.0, 2.0, 3.0),
+                Vector::new(13.0, 2.0, 13.0),
                 Vector::new(0.0, 0.0, 0.0),
                 Vector::new(0.0, 1.0, 0.0),
-                0.6,
+                0.0,
                 10.0,
             ),
             buffer: ImageBuffer::new(image_width, image_height),
             world: HittableObjects::new(),
         }
     }
-
-    fn create_scene(&mut self) {
-        let ground_material = Material::new_lambertian(Color::new(0.5,0.5,0.5));
-        let ground_hittable = Hittable::new_sphere(Vector::new(0.0,-1000.0,0.0),1000.0,ground_material);
+    fn create_scene(&mut self, case: usize) {
+        match case {
+            1 => {
+                self.ensemble();
+            }
+            2 => {
+                self.earth();
+            }
+            3 => {
+                self.perlin_noise();
+            }
+            _ => {}
+        }
+    }
+    fn perlin_noise(&mut self) {
+        let perlin_texture = Texture::new_perlin(4.0);
+        let perlin_surface = Material::new_lambertian(perlin_texture);
+        self.world.add(Hittable::new_sphere(
+            Vector::new(0.0, -1000.0, 0.0),
+            1000.0,
+            perlin_surface.clone(),
+        ));
+        self.world.add(Hittable::new_sphere(
+            Vector::new(0.0, 2.0, 0.0),
+            2.0,
+            perlin_surface,
+        ));
+    }
+    fn earth(&mut self) {
+        let earth_texture = Texture::new_image("earthmap.jpg".to_string());
+        let earth_surface = Material::new_lambertian(earth_texture);
+        let globe = Hittable::new_sphere(Vector::new(0.0, 0.0, 0.0), 2.0, earth_surface);
+        self.world.add(globe);
+    }
+    fn ensemble(&mut self) {
+        let ground_material = Material::new_lambertian(Texture::new_checker(
+            0.32,
+            Color::new(0.2, 0.3, 0.1),
+            Color::white(),
+        ));
+        let ground_hittable =
+            Hittable::new_sphere(Vector::new(0.0, -1000.0, 0.0), 1000.0, ground_material);
         self.world.add(ground_hittable);
 
-        for a in -10..10 {
-            for b in -10..10 {
+        for a in -5..5 {
+            for b in -5..5 {
                 let choose_mat = util::random();
-                let center = Vector::new(a as f64 + 0.9* util::random(), 0.2, b as f64 +0.9*util::random());
-                if (center - Vector::new(4.0,0.2,0.0)).len() > 0.9 {
+                let center = Vector::new(
+                    a as f64 + 0.9 * util::random(),
+                    0.2,
+                    b as f64 + 0.9 * util::random(),
+                );
+                if (center - Vector::new(4.0, 0.2, 0.0)).len() > 0.9 {
                     if choose_mat < 0.8 {
                         // lambertian
-                        let sphere_material = Material::new_lambertian(Color::random());
-                        let center2 = center + Vector::new(0.0, util::random_interval(0.0,0.5),0.0);
-                        let sphere_hittable = Hittable::new_moving_sphere(center, center2, 0.2, sphere_material);
+                        let sphere_material =
+                            Material::new_lambertian(Texture::new_solid(Color::random()));
+                        let center2 =
+                            center + Vector::new(0.0, util::random_interval(0.0, 0.5), 0.0);
+                        let sphere_hittable =
+                            Hittable::new_moving_sphere(center, center2, 0.2, sphere_material);
                         self.world.add(sphere_hittable);
                     } else if choose_mat < 0.95 {
                         // metal
-                        let sphere_material = Material::new_metal(Color::random_interval(0.5,1.0),  util::random_interval(0.0,0.5));
+                        let sphere_material = Material::new_metal(
+                            Color::random_interval(0.5, 1.0),
+                            util::random_interval(0.0, 0.5),
+                        );
                         let sphere_hittable = Hittable::new_sphere(center, 0.2, sphere_material);
                         self.world.add(sphere_hittable);
                     } else {
@@ -180,22 +229,21 @@ impl Image {
         }
 
         let material_1 = Material::new_dielectric(1.5);
-        let hittable_1 = Hittable::new_sphere(Vector::new(0.0,1.0,0.0),1.0,material_1);
+        let hittable_1 = Hittable::new_sphere(Vector::new(0.0, 1.0, 0.0), 1.0, material_1);
         self.world.add(hittable_1);
 
-        let material_2 = Material::new_lambertian(Color::new(0.4,0.2,0.1));
-        let hittable_2 = Hittable::new_sphere(Vector::new(-4.0,1.0,0.0),1.0,material_2);
+        let material_2 = Material::new_lambertian(Texture::new_solid(Color::new(0.4, 0.2, 0.1)));
+        let hittable_2 = Hittable::new_sphere(Vector::new(-4.0, 1.0, 0.0), 1.0, material_2);
         self.world.add(hittable_2);
 
-        let material_3 = Material::new_metal(Color::new(0.7,0.6,0.5),0.0);
-        let hittable_3 = Hittable::new_sphere(Vector::new(4.0,1.0,0.0),1.0,material_3);
+        let material_3 = Material::new_metal(Color::new(0.7, 0.6, 0.5), 0.0);
+        let hittable_3 = Hittable::new_sphere(Vector::new(4.0, 1.0, 0.0), 1.0, material_3);
         self.world.add(hittable_3);
     }
 
     pub fn render(&mut self) {
-        self.create_scene();
+        self.create_scene(3);
         let pb = ProgressBar::new((self.image_height) as u64);
-        // let bvh_world = BvhNode::new(&self.world);
         for i in 0..self.image_height {
             for j in 0..self.image_width {
                 let mut pixel_color = Color::black();
@@ -210,7 +258,6 @@ impl Image {
                 self.buffer.put_pixel(j, i, pixel_color.as_pixel());
             }
             pb.inc(1);
-            // self.buffer.save("proc_image.png").unwrap();
         }
         self.buffer.save("image.png").unwrap();
         self.world.clear();

@@ -1,48 +1,46 @@
+use crate::image::hittable::texture::Texture;
 use crate::image::ray::Ray;
 use crate::image::util;
 use crate::image::vector::{Color, Vector};
 
-#[derive(Default, Copy, Clone)]
+#[derive(Clone)]
 pub enum MaterialType {
-    #[default]
-    Lambertian,
-    Metal,
-    Dielectric,
+    Lambertian { texture: Texture },
+    Metal { albedo: Color, fuzz: f64 },
+    Dielectric { refraction_index: f64 },
+}
+impl Default for MaterialType {
+    fn default() -> Self {
+        MaterialType::Dielectric {
+            refraction_index: 1.0,
+        }
+    }
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Clone)]
 pub struct Material {
     material: MaterialType,
-    albedo: Color,
-    fuzz: f64,
-    refraction_index: f64,
 }
 
 impl Material {
-    pub fn new_lambertian(albedo: Color) -> Self {
+    pub fn new_lambertian(texture: Texture) -> Self {
         Self {
-            material: MaterialType::Lambertian,
-            albedo,
-            fuzz: 0.0,
-            refraction_index: 0.0,
+            material: MaterialType::Lambertian { texture },
         }
     }
 
     pub fn new_metal(albedo: Color, fuzz: f64) -> Self {
         Self {
-            material: MaterialType::Metal,
-            albedo,
-            fuzz: fuzz.min(1.0),
-            refraction_index: 0.0,
+            material: MaterialType::Metal {
+                albedo,
+                fuzz: fuzz.min(1.0),
+            },
         }
     }
 
     pub fn new_dielectric(refraction_index: f64) -> Self {
         Self {
-            material: MaterialType::Dielectric,
-            albedo: Color::white(),
-            fuzz: 0.0,
-            refraction_index,
+            material: MaterialType::Dielectric { refraction_index },
         }
     }
     pub fn scatter(
@@ -53,13 +51,13 @@ impl Material {
         ray_scattered: &mut Ray,
     ) -> bool {
         match self.material {
-            MaterialType::Lambertian => {
+            MaterialType::Lambertian { .. } => {
                 self.scatter_lambertian(ray_in, rec, attenuation, ray_scattered)
             }
-            MaterialType::Metal => {
+            MaterialType::Metal { .. } => {
                 self.scatter_metal(ray_in, rec, attenuation, ray_scattered)
             }
-            MaterialType::Dielectric => {
+            MaterialType::Dielectric { .. } => {
                 self.scatter_dielectric(ray_in, rec, attenuation, ray_scattered)
             }
         }
@@ -71,12 +69,15 @@ impl Material {
         attenuation: &mut Color,
         ray_scattered: &mut Ray,
     ) -> bool {
+        let MaterialType::Lambertian { texture } = self.material.clone() else {
+            return false;
+        };
         let mut scatter_direction = rec.normal + Vector::random_unit_vector();
         if scatter_direction.near_zero() {
             scatter_direction = rec.normal;
         }
         *ray_scattered = Ray::new_time(rec.p, scatter_direction, ray_in.time());
-        *attenuation = self.albedo;
+        *attenuation = texture.value(rec.u, rec.v, rec.p);
         true
     }
     pub fn scatter_metal(
@@ -86,10 +87,13 @@ impl Material {
         attenuation: &mut Color,
         ray_scattered: &mut Ray,
     ) -> bool {
+        let MaterialType::Metal { albedo, fuzz } = self.material else {
+            return false;
+        };
         let mut reflected = Vector::reflect(&(ray_in.direction()), rec.normal);
-        reflected = reflected.unit_vector() + self.fuzz * Vector::random_unit_vector();
+        reflected = reflected.unit_vector() + fuzz * Vector::random_unit_vector();
         *ray_scattered = Ray::new_time(rec.p, reflected, ray_in.time());
-        *attenuation = self.albedo;
+        *attenuation = albedo;
         ray_scattered.direction().dot(rec.normal) > 0.0
     }
 
@@ -100,10 +104,13 @@ impl Material {
         attenuation: &mut Color,
         ray_scattered: &mut Ray,
     ) -> bool {
+        let MaterialType::Dielectric { refraction_index } = self.material else {
+            return false;
+        };
         let ri = if rec.front_face {
-            1.0 / self.refraction_index
+            1.0 / refraction_index
         } else {
-            self.refraction_index
+            refraction_index
         };
         let unit_direction = ray_in.direction().unit_vector();
         let cos_theta = (-1.0 * unit_direction.dot(rec.normal)).min(1.0);
@@ -114,7 +121,7 @@ impl Material {
         } else {
             unit_direction.refract(rec.normal, ri)
         };
-        *attenuation = self.albedo;
+        *attenuation = Color::white();
         *ray_scattered = Ray::new_time(rec.p, direction, ray_in.time());
         true
     }

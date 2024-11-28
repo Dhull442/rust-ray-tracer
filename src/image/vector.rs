@@ -1,4 +1,4 @@
-use crate::image::util::{Interval,random_interval,random};
+use crate::image::util::{random, random_interval, Interval};
 use core::ops::{Add, Div, Mul, Sub};
 use image::Rgb;
 
@@ -10,8 +10,8 @@ pub struct Vector {
 }
 
 impl Vector {
-    pub fn zero() -> Self{
-        Self::new(0.0, 0.0,0.0)
+    pub fn zero() -> Self {
+        Self::new(0.0, 0.0, 0.0)
     }
 
     pub fn new(x: f64, y: f64, z: f64) -> Self {
@@ -45,18 +45,22 @@ impl Vector {
     }
 
     pub fn random() -> Self {
-        Self::new(random(), random(),random())
+        Self::new(random(), random(), random())
     }
 
-    pub fn random_interval(min:f64, max:f64) -> Self {
-        Self::new(random_interval(min,max),random_interval(min,max),random_interval(min,max))
+    pub fn random_interval(min: f64, max: f64) -> Self {
+        Self::new(
+            random_interval(min, max),
+            random_interval(min, max),
+            random_interval(min, max),
+        )
     }
 
     pub fn random_unit_vector() -> Self {
         let theta = 2.0 * std::f64::consts::PI * random();
-        let z = random_interval(-1.0,1.0);
+        let z = random_interval(-1.0, 1.0);
         let r = (1.0 - z.powf(2.0)).sqrt();
-        Self::new(r*f64::cos(theta),r*f64::sin(theta),z)
+        Self::new(r * f64::cos(theta), r * f64::sin(theta), z)
     }
 
     pub fn random_on_hemisphere(normal: Self) -> Self {
@@ -68,9 +72,9 @@ impl Vector {
         }
     }
 
-    pub fn random_in_unit_disk() -> Self{
+    pub fn random_in_unit_disk() -> Self {
         let theta = 2.0 * std::f64::consts::PI * random();
-        Self::new(f64::cos(theta),f64::sin(theta),0.0)
+        Self::new(f64::cos(theta), f64::sin(theta), 0.0)
     }
 
     pub fn near_zero(&self) -> bool {
@@ -89,17 +93,15 @@ impl Vector {
         ray_out_perp + ray_out_parallel
     }
 
-
     pub fn axis(&self, n: u64) -> f64 {
         if n == 0 {
             self.x
-        } else if n==1 {
+        } else if n == 1 {
             self.y
         } else {
             self.z
         }
     }
-
 }
 
 impl Add for Vector {
@@ -205,6 +207,10 @@ impl Color {
         Self::new(0.0, 0.0, 1.0)
     }
 
+    pub fn cyan() -> Self {
+        Self::new(0.0, 1.0, 1.0)
+    }
+
     fn linear_to_gamma(linear: f64) -> f64 {
         if linear > 0.0 {
             return linear.sqrt();
@@ -212,12 +218,20 @@ impl Color {
         0.0
     }
 
-    pub fn random() -> Self{
+    pub fn random() -> Self {
         Self::new(random(), random(), random())
     }
 
-    pub fn random_interval(min: f64, max: f64) -> Self{
-        Self::new(random_interval(min,max),random_interval(min,max),random_interval(min,max))
+    pub fn random_interval(min: f64, max: f64) -> Self {
+        Self::new(
+            random_interval(min, max),
+            random_interval(min, max),
+            random_interval(min, max),
+        )
+    }
+
+    pub fn print(&self) {
+        println!("{} {} {}", self.r, self.g, self.b)
     }
 }
 
