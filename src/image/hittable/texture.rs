@@ -120,6 +120,6 @@ impl Texture {
         let NoiseTexture { noise, scale } = &self.texture else {
             return Color::black();
         };
-        (1.0 + noise.noise(p * (*scale))) * 0.5 * Color::white()
+        (1.0 + f64::sin(scale * p.z + 10.0 * noise.turb(p, 7))) * Color::new(0.5, 0.5, 0.5)
     }
 }

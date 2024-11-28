@@ -9,8 +9,22 @@ pub struct AABB {
 }
 
 impl AABB {
+    fn pad_to_min(&mut self) {
+        let delta = 0.0001;
+        if self.x.size() < delta {
+            self.x.expand(delta);
+        }
+        if self.y.size() < delta {
+            self.y.expand(delta);
+        }
+        if self.z.size() < delta {
+            self.z.expand(delta);
+        }
+    }
     pub fn new(x: Interval, y: Interval, z: Interval) -> Self {
-        Self { x, y, z }
+        let mut aabb = Self { x, y, z };
+        aabb.pad_to_min();
+        aabb
     }
 
     pub fn longest_axis(&self) -> usize {

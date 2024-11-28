@@ -1,5 +1,5 @@
 use crate::image::util::{random, random_interval, Interval};
-use core::ops::{Add, Div, Mul, Sub};
+use core::ops::{Add, Div, Mul, Neg, Sub};
 use image::Rgb;
 
 #[derive(Default, Copy, Clone)]
@@ -111,6 +111,17 @@ impl Add for Vector {
             x: self.x + other.x,
             y: self.y + other.y,
             z: self.z + other.z,
+        }
+    }
+}
+
+impl Neg for Vector {
+    type Output = Self;
+    fn neg(self) -> Self {
+        Self {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
         }
     }
 }

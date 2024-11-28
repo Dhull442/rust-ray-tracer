@@ -8,6 +8,7 @@ pub enum MaterialType {
     Lambertian { texture: Texture },
     Metal { albedo: Color, fuzz: f64 },
     Dielectric { refraction_index: f64 },
+    DiffuseLight { texture: Texture },
 }
 impl Default for MaterialType {
     fn default() -> Self {
@@ -26,6 +27,12 @@ impl Material {
     pub fn new_lambertian(texture: Texture) -> Self {
         Self {
             material: MaterialType::Lambertian { texture },
+        }
+    }
+
+    pub fn new_diffuse_light(texture: Texture) -> Self {
+        Self {
+            material: MaterialType::DiffuseLight { texture },
         }
     }
 
@@ -60,7 +67,22 @@ impl Material {
             MaterialType::Dielectric { .. } => {
                 self.scatter_dielectric(ray_in, rec, attenuation, ray_scattered)
             }
+            _ => false,
         }
+    }
+
+    pub fn emitted(&self, u: f64, v: f64, p: Vector) -> Color {
+        match &self.material {
+            MaterialType::DiffuseLight { .. } => self.emitted_diffuse_light(u, v, p),
+            _ => Color::black(),
+        }
+    }
+
+    fn emitted_diffuse_light(&self, u: f64, v: f64, p: Vector) -> Color {
+        let MaterialType::DiffuseLight { texture } = &self.material else {
+            return Color::black();
+        };
+        texture.value(u, v, p)
     }
     pub fn scatter_lambertian(
         &self,

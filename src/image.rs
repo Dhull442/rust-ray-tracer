@@ -33,6 +33,7 @@ pub struct Camera {
     focus_dist: f64,
     defocus_disk_u: Vector,
     defocus_dish_v: Vector,
+    background: Color,
 }
 
 impl Camera {
@@ -47,6 +48,7 @@ impl Camera {
         vup: Vector,
         defocus_angle: f64,
         focus_dist: f64,
+        background: Color,
     ) -> Self {
         let center = lookfrom;
         let theta = util::degree_to_radians(vfov);
@@ -89,6 +91,7 @@ impl Camera {
             focus_dist,
             defocus_disk_u,
             defocus_dish_v,
+            background,
         }
     }
 
@@ -137,12 +140,14 @@ impl Image {
                 image_height as f64,
                 sample_per_pixel,
                 max_depth,
-                20.0,
-                Vector::new(13.0, 2.0, 13.0),
-                Vector::new(0.0, 0.0, 0.0),
+                40.0,
+                Vector::new(278.0, 278.0, -800.0),
+                Vector::new(278.0, 278.0, 0.0),
                 Vector::new(0.0, 1.0, 0.0),
                 0.0,
                 10.0,
+                Color::black(),
+                // Color::new(0.7,0.8,1.0),
             ),
             buffer: ImageBuffer::new(image_width, image_height),
             world: HittableObjects::new(),
@@ -151,7 +156,7 @@ impl Image {
     fn create_scene(&mut self, case: usize) {
         match case {
             1 => {
-                self.ensemble();
+                self.spheres();
             }
             2 => {
                 self.earth();
@@ -159,8 +164,130 @@ impl Image {
             3 => {
                 self.perlin_noise();
             }
+            4 => {
+                self.quads();
+            }
+            5 => {
+                self.simple_lights();
+            }
+            6 => {
+                self.cornell_box();
+            }
             _ => {}
         }
+    }
+    fn cornell_box(&mut self) {
+        let red = Material::new_lambertian(Texture::new_solid(Color::new(0.65, 0.05, 0.05)));
+        let white = Material::new_lambertian(Texture::new_solid(Color::new(0.73, 0.73, 0.73)));
+        let green = Material::new_lambertian(Texture::new_solid(Color::new(0.12, 0.45, 0.15)));
+        let light = Material::new_diffuse_light(Texture::new_solid(Color::new(15., 15.0, 15.0)));
+
+        let q1 = Hittable::new_quad(
+            Vector::new(555., 0., 0.),
+            Vector::new(0., 555., 0.),
+            Vector::new(0., 0., 555.),
+            green,
+        );
+        let q2 = Hittable::new_quad(
+            Vector::new(0., 0., 0.),
+            Vector::new(0., 555., 0.),
+            Vector::new(0., 0., 555.),
+            red,
+        );
+        let q3 = Hittable::new_quad(
+            Vector::new(343., 554., 332.),
+            Vector::new(-130., 0., 0.),
+            Vector::new(0., 0., -105.),
+            light,
+        );
+        let q4 = Hittable::new_quad(
+            Vector::new(0., 0., 0.),
+            Vector::new(555., 0., 0.),
+            Vector::new(0., 0., 555.),
+            white.clone(),
+        );
+        let q5 = Hittable::new_quad(
+            Vector::new(555., 555., 555.),
+            Vector::new(-555., 0., 0.),
+            Vector::new(0., 0., -555.),
+            white.clone(),
+        );
+        let q6 = Hittable::new_quad(
+            Vector::new(0., 0., 555.),
+            Vector::new(555., 0., 0.),
+            Vector::new(0., 555., 0.),
+            white.clone(),
+        );
+
+        self.world.add(q1);
+        self.world.add(q2);
+        self.world.add(q3);
+        self.world.add(q4);
+        self.world.add(q5);
+        self.world.add(q6);
+        self.world.add_hittables(HittableObjects::new_box(
+            Vector::new(130., 0., 65.),
+            Vector::new(295., 165., 230.),
+            white.clone(),
+        ));
+        self.world.add_hittables(HittableObjects::new_box(
+            Vector::new(265., 0., 295.),
+            Vector::new(430., 330., 460.),
+            white,
+        ));
+    }
+    fn simple_lights(&mut self) {
+        self.perlin_noise();
+        let difflight = Material::new_diffuse_light(Texture::new_solid(Color::new(4.0, 4., 4.)));
+        let light = Hittable::new_quad(
+            Vector::new(3., 1., -2.),
+            Vector::new(2., 0., 0.),
+            Vector::new(0., 2., 0.),
+            difflight,
+        );
+        self.world.add(light);
+    }
+    fn quads(&mut self) {
+        let left_red = Material::new_lambertian(Texture::new_solid(Color::red()));
+        let back_green = Material::new_lambertian(Texture::new_solid(Color::green()));
+        let right_blue = Material::new_lambertian(Texture::new_solid(Color::blue()));
+        let upper_orange = Material::new_lambertian(Texture::new_solid(Color::new(1.0, 0.5, 0.0)));
+        let lower_teal = Material::new_lambertian(Texture::new_solid(Color::new(0.2, 0.8, 0.8)));
+        let left = Hittable::new_quad(
+            Vector::new(-3.0, -2.0, 5.0),
+            Vector::new(0.0, 0.0, -4.0),
+            Vector::new(0.0, 4.0, 0.0),
+            left_red,
+        );
+        let right = Hittable::new_quad(
+            Vector::new(3.0, -2.0, 1.0),
+            Vector::new(0.0, 0.0, 4.0),
+            Vector::new(0.0, 4.0, 0.0),
+            right_blue,
+        );
+        let back = Hittable::new_quad(
+            Vector::new(-2.0, -2.0, 0.0),
+            Vector::new(4.0, 0.0, 0.),
+            Vector::new(0.0, 4.0, 0.0),
+            back_green,
+        );
+        let upper = Hittable::new_quad(
+            Vector::new(-2.0, 3.0, 1.0),
+            Vector::new(4.0, 0.0, 0.0),
+            Vector::new(0.0, 0.0, 4.0),
+            upper_orange,
+        );
+        let lower = Hittable::new_quad(
+            Vector::new(-2., -3., 5.),
+            Vector::new(4., 0., 0.),
+            Vector::new(0.0, 0.0, -4.0),
+            lower_teal,
+        );
+        self.world.add(left);
+        self.world.add(right);
+        self.world.add(back);
+        self.world.add(upper);
+        self.world.add(lower);
     }
     fn perlin_noise(&mut self) {
         let perlin_texture = Texture::new_perlin(4.0);
@@ -182,7 +309,7 @@ impl Image {
         let globe = Hittable::new_sphere(Vector::new(0.0, 0.0, 0.0), 2.0, earth_surface);
         self.world.add(globe);
     }
-    fn ensemble(&mut self) {
+    fn spheres(&mut self) {
         let ground_material = Material::new_lambertian(Texture::new_checker(
             0.32,
             Color::new(0.2, 0.3, 0.1),
@@ -242,7 +369,7 @@ impl Image {
     }
 
     pub fn render(&mut self) {
-        self.create_scene(3);
+        self.create_scene(6);
         let pb = ProgressBar::new((self.image_height) as u64);
         for i in 0..self.image_height {
             for j in 0..self.image_width {
@@ -250,10 +377,11 @@ impl Image {
                 for _ in 0..self.camera.sample_per_pixel {
                     pixel_color = pixel_color
                         + self.camera.pixel_sample_scale
-                            * self
-                                .camera
-                                .get_ray(j, i)
-                                .color(self.camera.max_depth, &self.world);
+                            * self.camera.get_ray(j, i).color(
+                                self.camera.max_depth,
+                                &self.world,
+                                self.camera.background,
+                            );
                 }
                 self.buffer.put_pixel(j, i, pixel_color.as_pixel());
             }

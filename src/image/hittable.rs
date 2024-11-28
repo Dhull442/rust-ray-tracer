@@ -9,29 +9,68 @@ pub mod material;
 pub mod texture;
 
 use crate::image::hittable::bvh::BvhNode;
+use crate::image::util::Interval;
 pub use material::{HitRecord, Material};
 
-#[derive(Default, Clone)]
-enum HittableType {
-    #[default]
-    Sphere,
+#[derive(Clone)]
+pub enum HittableType {
+    Sphere {
+        center: Ray,
+        radius: f64,
+    },
+    Quad {
+        q: Vector,
+        u: Vector,
+        v: Vector,
+        w: Vector,
+        normal: Vector,
+        d: f64,
+    },
+}
+
+impl Default for HittableType {
+    fn default() -> Self {
+        Self::Sphere {
+            center: Ray::default(),
+            radius: 1.0,
+        }
+    }
 }
 #[derive(Default, Clone)]
 pub struct Hittable {
     hittable: HittableType,
-    center: Ray,
-    radius: f64,
     material: Material,
     bbox: AABB,
 }
 
 impl Hittable {
+    pub fn new_quad(q: Vector, u: Vector, v: Vector, material: Material) -> Self {
+        let bbox_d1 = AABB::new_from_vector(q, q + u + v);
+        let bbox_d2 = AABB::new_from_vector(q + u, q + v);
+        let n = u.cross(v);
+        let normal = n.unit_vector();
+        let d = normal.dot(q);
+        let w = n / n.dot(n);
+        Self {
+            hittable: HittableType::Quad {
+                q,
+                u,
+                v,
+                w,
+                normal,
+                d,
+            },
+            material,
+            bbox: AABB::new_from_aabb(&bbox_d1, &bbox_d2),
+        }
+    }
     pub fn new_sphere(center: Vector, radius: f64, material: Material) -> Self {
         let rvec = Vector::new(radius, radius, radius);
         Self {
-            hittable: HittableType::Sphere,
-            center: Ray::new(center, Vector::zero()),
-            radius,
+            hittable: HittableType::Sphere {
+                center: Ray::new(center, Vector::zero()),
+                radius,
+            },
             material,
             bbox: AABB::new_from_vector(center - rvec, center + rvec),
         }
@@ -47,19 +86,23 @@ impl Hittable {
         let bbox1 = AABB::new_from_vector(center.at(0.0) - rvec, center.at(0.0) + rvec);
         let bbox2 = AABB::new_from_vector(center.at(1.0) - rvec, center.at(1.0) + rvec);
         Self {
-            hittable: HittableType::Sphere,
-            center,
-            radius,
+            hittable: HittableType::Sphere {
+                center: center,
+                radius: radius,
+            },
             material,
             bbox: AABB::new_from_aabb(&bbox1, &bbox2),
         }
     }
-    pub fn hit_sphere(&self, ray: &Ray, ray_t: util::Interval, rec: &mut HitRecord) -> bool {
-        let current_center = self.center.at(ray.time());
+    fn hit_sphere(&self, ray: &Ray, ray_t: util::Interval, rec: &mut HitRecord) -> bool {
+        let HittableType::Sphere { center, radius } = self.hittable else {
+            return false;
+        };
+        let current_center = center.at(ray.time());
         let oc = current_center - ray.origin();
         let a = ray.direction().len_squared();
         let h = ray.direction().dot(oc);
-        let c = oc.len_squared() - self.radius.powf(2.0);
+        let c = oc.len_squared() - radius.powf(2.0);
         let discriminant = h.powf(2.0) - a * c;
         if discriminant < 0.0 {
             return false;
@@ -75,15 +118,63 @@ impl Hittable {
 
         rec.t = root;
         rec.p = ray.at(rec.t);
-        let outward_normal = (rec.p - current_center) / self.radius;
+        let outward_normal = (rec.p - current_center) / radius;
         rec.set_face_normal(*ray, outward_normal);
         self.get_sphere_uv(outward_normal, &mut rec.u, &mut rec.v);
         rec.material = self.material.clone();
         true
     }
+
+    fn is_interior(a: f64, b: f64, rec: &mut HitRecord) -> bool {
+        let unit_interval = Interval::new(0.0, 1.0);
+        if !unit_interval.contains(a) || !unit_interval.contains(b) {
+            return false;
+        }
+        rec.u = a;
+        rec.v = b;
+        true
+    }
+    fn hit_quad(&self, ray: &Ray, ray_t: util::Interval, rec: &mut HitRecord) -> bool {
+        let HittableType::Quad {
+            q,
+            u,
+            v,
+            w,
+            normal,
+            d,
+            ..
+        } = self.hittable
+        else {
+            return false;
+        };
+        let denom = normal.dot(ray.direction());
+
+        if denom.abs() < 1e-8 {
+            return false;
+        }
+
+        let t = (d - normal.dot(ray.origin())) / denom;
+        if !ray_t.contains(t) {
+            return false;
+        }
+
+        let intersection = ray.at(t);
+        let planar_hitpt_vector = intersection - q;
+        let alpha = w.dot(planar_hitpt_vector.cross(v));
+        let beta = w.dot(u.cross(planar_hitpt_vector));
+        if !Self::is_interior(alpha, beta, rec) {
+            return false;
+        }
+        rec.t = t;
+        rec.p = intersection;
+        rec.material = self.material.clone();
+        rec.set_face_normal(*ray, normal);
+        true
+    }
     pub fn hit(&self, ray: &Ray, ray_t: util::Interval, rec: &mut HitRecord) -> bool {
         match self.hittable {
-            HittableType::Sphere => self.hit_sphere(ray, ray_t, rec),
+            HittableType::Sphere { .. } => self.hit_sphere(ray, ray_t, rec),
+            HittableType::Quad { .. } => self.hit_quad(ray, ray_t, rec),
         }
     }
 
@@ -117,6 +208,10 @@ impl HittableObjects {
         self.objects.push(hittable);
     }
 
+    pub fn add_hittables(&mut self, hittables: HittableObjects) {
+        self.objects.extend(hittables.objects);
+    }
+
     pub fn bounding_box(&self) -> AABB {
         self.bvh.bounding_box()
     }
@@ -140,5 +235,53 @@ impl HittableObjects {
             }
         }
         hit_something
+    }
+
+    pub fn new_box(a: Vector, b: Vector, material: Material) -> Self {
+        let mut sides = Self::new();
+        let min = Vector::new(a.x.min(b.x), a.y.min(b.y), a.z.min(b.z));
+        let max = Vector::new(a.x.max(b.x), a.y.max(b.y), a.z.max(b.z));
+
+        let dx = Vector::new(max.x - min.x, 0., 0.);
+        let dy = Vector::new(0., max.y - min.y, 0.);
+        let dz = Vector::new(0., 0., max.z - min.z);
+
+        sides.add(Hittable::new_quad(
+            Vector::new(min.x, min.y, max.z),
+            dx,
+            dy,
+            material.clone(),
+        ));
+        sides.add(Hittable::new_quad(
+            Vector::new(max.x, min.y, max.z),
+            -dz,
+            dy,
+            material.clone(),
+        ));
+        sides.add(Hittable::new_quad(
+            Vector::new(max.x, min.y, min.z),
+            -dx,
+            dy,
+            material.clone(),
+        ));
+        sides.add(Hittable::new_quad(
+            Vector::new(min.x, min.y, min.z),
+            dz,
+            dy,
+            material.clone(),
+        ));
+        sides.add(Hittable::new_quad(
+            Vector::new(min.x, max.y, max.z),
+            dx,
+            -dz,
+            material.clone(),
+        ));
+        sides.add(Hittable::new_quad(
+            Vector::new(min.x, min.y, min.z),
+            dx,
+            dz,
+            material.clone(),
+        ));
+        sides
     }
 }

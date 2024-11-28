@@ -42,25 +42,25 @@ impl Ray {
         self.origin + self.direction * t
     }
 
-    pub fn color(&self, depth: u32, world: &HittableObjects) -> Color {
+    pub fn color(&self, depth: u32, world: &HittableObjects, background: Color) -> Color {
         if depth == 0 {
             return Color::black();
         }
         let mut rec = HitRecord::default();
         let interval = util::Interval::new(0.001, f64::INFINITY);
-        if world.hit(self, interval, &mut rec) {
-            let mut ray_scattered = Ray::default();
-            let mut attenuation = Color::black();
-            if rec
-                .material
-                .scatter(self, &rec, &mut attenuation, &mut ray_scattered)
-            {
-                return attenuation * ray_scattered.color(depth - 1, world);
-            }
-            return Color::black();
+        if !world.hit(self, interval, &mut rec) {
+            return background;
         }
-        let unit_direction = self.direction.unit_vector();
-        let a = 0.5 * (unit_direction.y + 1.0);
-        (1.0 - a) * Color::white() + a * Color::new(0.5, 0.7, 1.0)
+        let mut ray_scattered = Ray::default();
+        let mut attenuation = Color::black();
+        let color_from_emission = rec.material.emitted(rec.u, rec.v, rec.p);
+        if !rec
+            .material
+            .scatter(self, &rec, &mut attenuation, &mut ray_scattered)
+        {
+            return color_from_emission;
+        }
+        let color_from_scatter = attenuation * ray_scattered.color(depth - 1, world, background);
+        color_from_emission + color_from_scatter
     }
 }
