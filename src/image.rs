@@ -2,7 +2,9 @@ mod hittable;
 mod ray;
 mod util;
 mod vector;
+use crate::image::hittable::material::MaterialType;
 use crate::image::hittable::texture::Texture;
+use crate::image::util::random_interval;
 use hittable::{Hittable, HittableObjects, Material};
 use image::{ImageBuffer, RgbImage};
 use indicatif::ProgressBar;
@@ -141,11 +143,11 @@ impl Image {
                 sample_per_pixel,
                 max_depth,
                 40.0,
-                Vector::new(278.0, 278.0, -800.0),
+                Vector::new(478.0, 278.0, -600.0),
                 Vector::new(278.0, 278.0, 0.0),
                 Vector::new(0.0, 1.0, 0.0),
                 0.0,
-                10.0,
+                100.0,
                 Color::black(),
                 // Color::new(0.7,0.8,1.0),
             ),
@@ -173,8 +175,190 @@ impl Image {
             6 => {
                 self.cornell_box();
             }
+            7 => {
+                self.cornell_smoke();
+            }
+            8 => {
+                self.final_scene();
+            }
             _ => {}
         }
+    }
+    fn final_scene(&mut self) {
+        let ground = Material::new_lambertian(Texture::new_solid(Color::new(0.48, 0.83, 0.53)));
+        let boxes_per_side = 10;
+        for i in 0..boxes_per_side {
+            for j in 0..boxes_per_side {
+                let w = 1000.;
+                let x0 = -1000. + (i as f64) * w;
+                let z0 = -1000. + (j as f64) * w;
+                let y0 = 0.;
+                let x1 = x0 + w;
+                let y1 = random_interval(0., 101.);
+                let z1 = z0 + w;
+                self.world.add_hittables(HittableObjects::new_box(
+                    Vector::new(x0, y0, z0),
+                    Vector::new(x1, y1, z1),
+                    ground.clone(),
+                ));
+            }
+        }
+
+        let light = Material::new_diffuse_light(Texture::new_solid(Color::new(7., 7., 7.)));
+        self.world.add(Hittable::new_quad(
+            Vector::new(123., 554., 147.),
+            Vector::new(300., 0., 0.),
+            Vector::new(0., 0., 265.),
+            light.clone(),
+        ));
+
+        let center1 = Vector::new(400., 400., 200.);
+        let center2 = center1 + Vector::new(30., 0., 0.);
+        let sphere_material =
+            Material::new_lambertian(Texture::new_solid(Color::new(0.7, 0.3, 0.1)));
+
+        self.world.add(Hittable::new_moving_sphere(
+            center1,
+            center2,
+            50.,
+            sphere_material,
+        ));
+        self.world.add(Hittable::new_sphere(
+            Vector::new(260., 150., 45.),
+            50.,
+            Material::new_dielectric(1.5),
+        ));
+        self.world.add(Hittable::new_sphere(
+            Vector::new(0., 150., 145.),
+            50.,
+            Material::new_metal(Color::new(0.8, 0.8, 0.9), 1.0),
+        ));
+
+        let boundary = Hittable::new_sphere(
+            Vector::new(360., 150., 145.),
+            70.,
+            Material::new_dielectric(1.5),
+        );
+        let mut boundary2 = boundary.clone();
+
+        self.world.add(boundary);
+
+        boundary2.add_medium(0.2, Color::new(0.2, 0.4, 0.9));
+        self.world.add(boundary2);
+
+        let mut boundary3 =
+            Hittable::new_sphere(Vector::zero(), 5000., Material::new_dielectric(1.5));
+        boundary3.add_medium(0.0001, Color::white());
+        self.world.add(boundary3);
+
+        let emat = Material::new_lambertian(Texture::new_image("earthmap.jpg".to_string()));
+        self.world.add(Hittable::new_sphere(
+            Vector::new(400., 200., 400.),
+            100.,
+            emat,
+        ));
+
+        let pertext = Material::new_lambertian(Texture::new_perlin(0.2));
+        self.world.add(Hittable::new_sphere(
+            Vector::new(220., 280., 300.),
+            80.,
+            pertext,
+        ));
+
+        let mut boxes2 = HittableObjects::new();
+        let white = Material::new_lambertian(Texture::new_solid(Color::new(0.73, 0.73, 0.73)));
+        let ns = 1000;
+        for _j in 0..ns {
+            boxes2.add(Hittable::new_sphere(
+                Vector::random_interval(0., 165.),
+                10.,
+                white.clone(),
+            ));
+        }
+
+        boxes2.rotate_y(15.);
+        boxes2.translate(Vector::new(-100., 270., 395.));
+
+        self.world.add_hittables(boxes2);
+    }
+    fn cornell_smoke(&mut self) {
+        let red = Material::new_lambertian(Texture::new_solid(Color::new(0.65, 0.05, 0.05)));
+        let white = Material::new_lambertian(Texture::new_solid(Color::new(0.73, 0.73, 0.73)));
+        let green = Material::new_lambertian(Texture::new_solid(Color::new(0.12, 0.45, 0.15)));
+        let light = Material::new_diffuse_light(Texture::new_solid(Color::new(15., 15.0, 15.0)));
+
+        let q1 = Hittable::new_quad(
+            Vector::new(555., 0., 0.),
+            Vector::new(0., 555., 0.),
+            Vector::new(0., 0., 555.),
+            green,
+        );
+        let q2 = Hittable::new_quad(
+            Vector::new(0., 0., 0.),
+            Vector::new(0., 555., 0.),
+            Vector::new(0., 0., 555.),
+            red,
+        );
+        let q3 = Hittable::new_quad(
+            Vector::new(113., 554., 127.),
+            Vector::new(330., 0., 0.),
+            Vector::new(0., 0., 305.),
+            light,
+        );
+        let q4 = Hittable::new_quad(
+            Vector::new(0., 0., 0.),
+            Vector::new(555., 0., 0.),
+            Vector::new(0., 0., 555.),
+            white.clone(),
+        );
+        let q5 = Hittable::new_quad(
+            Vector::new(555., 555., 555.),
+            Vector::new(-555., 0., 0.),
+            Vector::new(0., 0., -555.),
+            white.clone(),
+        );
+        let q6 = Hittable::new_quad(
+            Vector::new(0., 0., 555.),
+            Vector::new(555., 0., 0.),
+            Vector::new(0., 555., 0.),
+            white.clone(),
+        );
+
+        self.world.add(q1);
+        self.world.add(q2);
+        self.world.add(q3);
+        self.world.add(q4);
+        self.world.add(q5);
+        self.world.add(q6);
+
+        let mut q7 = Hittable::new_sphere(
+            Vector::new(0., 0., 0.),
+            5000.,
+            Material::new_lambertian(Texture::new_solid(Color::cyan())),
+        );
+        q7.translate(Vector::new(265., 265., 295.));
+        q7.add_medium(0.001, Color::white());
+
+        self.world.add(q7);
+
+        let mut box1 = HittableObjects::new_box(
+            Vector::new(0., 0., 0.),
+            Vector::new(165., 330., 165.),
+            white.clone(),
+        );
+        box1.rotate_y(15.);
+        box1.translate(Vector::new(265., 0., 295.));
+        self.world.add_hittables(box1);
+
+        let mut box2 = HittableObjects::new_box(
+            Vector::new(0., 0., 0.),
+            Vector::new(165., 165., 165.),
+            white,
+        );
+
+        box2.rotate_y(-18.);
+        box2.translate(Vector::new(130., 0., 65.));
+        self.world.add_hittables(box2);
     }
     fn cornell_box(&mut self) {
         let red = Material::new_lambertian(Texture::new_solid(Color::new(0.65, 0.05, 0.05)));
@@ -225,16 +409,25 @@ impl Image {
         self.world.add(q4);
         self.world.add(q5);
         self.world.add(q6);
-        self.world.add_hittables(HittableObjects::new_box(
-            Vector::new(130., 0., 65.),
-            Vector::new(295., 165., 230.),
+
+        let mut box1 = HittableObjects::new_box(
+            Vector::new(0., 0., 0.),
+            Vector::new(165., 330., 165.),
             white.clone(),
-        ));
-        self.world.add_hittables(HittableObjects::new_box(
-            Vector::new(265., 0., 295.),
-            Vector::new(430., 330., 460.),
+        );
+        box1.rotate_y(15.);
+        box1.translate(Vector::new(265., 0., 295.));
+        self.world.add_hittables(box1);
+
+        let mut box2 = HittableObjects::new_box(
+            Vector::new(0., 0., 0.),
+            Vector::new(165., 165., 165.),
             white,
-        ));
+        );
+
+        box2.rotate_y(-18.);
+        box2.translate(Vector::new(130., 0., 65.));
+        self.world.add_hittables(box2);
     }
     fn simple_lights(&mut self) {
         self.perlin_noise();
@@ -369,7 +562,8 @@ impl Image {
     }
 
     pub fn render(&mut self) {
-        self.create_scene(6);
+        let case = 8;
+        self.create_scene(case);
         let pb = ProgressBar::new((self.image_height) as u64);
         for i in 0..self.image_height {
             for j in 0..self.image_width {
@@ -386,6 +580,9 @@ impl Image {
                 self.buffer.put_pixel(j, i, pixel_color.as_pixel());
             }
             pb.inc(1);
+            if i % 10 == 0 {
+                self.buffer.save(format!("raw_image_{}.png", case)).unwrap();
+            }
         }
         self.buffer.save("image.png").unwrap();
         self.world.clear();

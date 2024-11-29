@@ -1,6 +1,7 @@
 use crate::image::ray::Ray;
 use crate::image::util::Interval;
 use crate::image::vector::Vector;
+use std::ops::Add;
 #[derive(Default, Copy, Clone)]
 pub struct AABB {
     x: Interval,
@@ -106,6 +107,17 @@ impl AABB {
         )
     }
 
+    pub fn x(&self) -> Interval {
+        self.x
+    }
+
+    pub fn y(&self) -> Interval {
+        self.y
+    }
+
+    pub fn z(&self) -> Interval {
+        self.z
+    }
     pub fn debug(&self) -> String {
         format!(
             "[{},{},{}]\t",
@@ -113,5 +125,17 @@ impl AABB {
             self.y.debug(),
             self.z.debug()
         )
+    }
+}
+
+impl Add<Vector> for AABB {
+    type Output = Self;
+
+    fn add(self, rhs: Vector) -> Self {
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
     }
 }

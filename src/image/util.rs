@@ -1,5 +1,6 @@
 use rand::Rng;
 use std::f64::consts;
+use std::ops::Add;
 
 // Utility Functions
 pub fn degree_to_radians(degree: f64) -> f64 {
@@ -74,5 +75,16 @@ impl Interval {
 
     pub fn debug(&self) -> String {
         format!("<{} {}>", self.min, self.max)
+    }
+}
+
+impl Add<f64> for Interval {
+    type Output = Self;
+
+    fn add(self, rhs: f64) -> Self::Output {
+        Self {
+            min: self.min + rhs,
+            max: self.max + rhs,
+        }
     }
 }

@@ -9,6 +9,7 @@ pub enum MaterialType {
     Metal { albedo: Color, fuzz: f64 },
     Dielectric { refraction_index: f64 },
     DiffuseLight { texture: Texture },
+    Isotropic { texture: Texture },
 }
 impl Default for MaterialType {
     fn default() -> Self {
@@ -50,6 +51,12 @@ impl Material {
             material: MaterialType::Dielectric { refraction_index },
         }
     }
+
+    pub fn new_isotropic(texture: Texture) -> Self {
+        Self {
+            material: MaterialType::Isotropic { texture },
+        }
+    }
     pub fn scatter(
         &self,
         ray_in: &Ray,
@@ -66,6 +73,9 @@ impl Material {
             }
             MaterialType::Dielectric { .. } => {
                 self.scatter_dielectric(ray_in, rec, attenuation, ray_scattered)
+            }
+            MaterialType::Isotropic { .. } => {
+                self.scatter_isotropic(ray_in, rec, attenuation, ray_scattered)
             }
             _ => false,
         }
@@ -84,7 +94,22 @@ impl Material {
         };
         texture.value(u, v, p)
     }
-    pub fn scatter_lambertian(
+
+    fn scatter_isotropic(
+        &self,
+        ray_in: &Ray,
+        rec: &HitRecord,
+        attenuation: &mut Color,
+        ray_scattered: &mut Ray,
+    ) -> bool {
+        let MaterialType::Isotropic { texture } = &self.material else {
+            return false;
+        };
+        *ray_scattered = Ray::new_time(rec.p, Vector::random_unit_vector(), ray_in.time());
+        *attenuation = texture.value(rec.u, rec.v, rec.p);
+        true
+    }
+    fn scatter_lambertian(
         &self,
         ray_in: &Ray,
         rec: &HitRecord,
@@ -102,7 +127,7 @@ impl Material {
         *attenuation = texture.value(rec.u, rec.v, rec.p);
         true
     }
-    pub fn scatter_metal(
+    fn scatter_metal(
         &self,
         ray_in: &Ray,
         rec: &HitRecord,
@@ -119,7 +144,7 @@ impl Material {
         ray_scattered.direction().dot(rec.normal) > 0.0
     }
 
-    pub fn scatter_dielectric(
+    fn scatter_dielectric(
         &self,
         ray_in: &Ray,
         rec: &HitRecord,

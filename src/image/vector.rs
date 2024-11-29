@@ -21,6 +21,9 @@ impl Vector {
         self.len_squared().sqrt()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0.0
+    }
     pub fn len_squared(&self) -> f64 {
         self.x.powf(2.0) + self.y.powf(2.0) + self.z.powf(2.0)
     }
