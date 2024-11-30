@@ -2,13 +2,14 @@ mod hittable;
 mod ray;
 mod util;
 mod vector;
-use crate::image::hittable::material::MaterialType;
 use crate::image::hittable::texture::Texture;
 use crate::image::util::random_interval;
 use hittable::{Hittable, HittableObjects, Material};
 use image::{ImageBuffer, RgbImage};
 use indicatif::ProgressBar;
+use rand::seq::SliceRandom;
 use ray::Ray;
+use rayon::prelude::*;
 use vector::{Color, Vector};
 
 pub struct Camera {
@@ -189,12 +190,12 @@ impl Image {
         let boxes_per_side = 10;
         for i in 0..boxes_per_side {
             for j in 0..boxes_per_side {
-                let w = 1000.;
+                let w = 100.;
                 let x0 = -1000. + (i as f64) * w;
                 let z0 = -1000. + (j as f64) * w;
                 let y0 = 0.;
                 let x1 = x0 + w;
-                let y1 = random_interval(0., 101.);
+                let y1 = random_interval(10., 101.);
                 let z1 = z0 + w;
                 self.world.add_hittables(HittableObjects::new_box(
                     Vector::new(x0, y0, z0),
@@ -580,9 +581,62 @@ impl Image {
                 self.buffer.put_pixel(j, i, pixel_color.as_pixel());
             }
             pb.inc(1);
+            pb.println(format!("ETA: {:?}", pb.eta()));
             if i % 10 == 0 {
-                self.buffer.save(format!("raw_image_{}.png", case)).unwrap();
+                self.buffer
+                    .save(format!("raw_image_{:?}.png", case))
+                    .unwrap();
             }
+        }
+        self.buffer.save("image.png").unwrap();
+        self.world.clear();
+        pb.finish_with_message(format!("Total Time Spent: {:?}", pb.elapsed()));
+    }
+
+    pub fn render_par(&mut self) {
+        let case = 8;
+        self.create_scene(case);
+        let pb = ProgressBar::new((self.image_height * self.image_width) as u64);
+        let mut pixels = vec![];
+        for i in 0..self.image_height {
+            for j in 0..self.image_width {
+                pixels.push((i, j));
+            }
+        }
+        let pixels = pixels
+            .into_par_iter()
+            .map(|(i, j)| {
+                let colors = (0..self.camera.sample_per_pixel)
+                    .into_par_iter()
+                    .map(|_| {
+                        self.camera.get_ray(j, i).color(
+                            self.camera.max_depth,
+                            &self.world,
+                            self.camera.background,
+                        )
+                    })
+                    .collect::<Vec<Color>>();
+                let pixel_color = self.camera.pixel_sample_scale
+                    * colors
+                        .into_iter()
+                        .fold(Color::black(), |acc, color| acc + color);
+
+                pb.inc(1);
+                if i == j {
+                    let eta = pb.eta();
+                    let elapsed = pb.elapsed();
+                    pb.println(format!(
+                        "ETA: {:?}, Elapsed: {:?}, Total: {:?}",
+                        eta,
+                        elapsed,
+                        eta + elapsed
+                    ));
+                }
+                (i, j, pixel_color.as_pixel())
+            })
+            .collect::<Vec<_>>();
+        for (i, j, pixel) in pixels {
+            self.buffer.put_pixel(j, i, pixel);
         }
         self.buffer.save("image.png").unwrap();
         self.world.clear();

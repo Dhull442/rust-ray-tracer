@@ -580,6 +580,7 @@ dependencies = [
  "indicatif",
  "log",
  "rand",
+ "rayon",
 ]
 
 [[package]]

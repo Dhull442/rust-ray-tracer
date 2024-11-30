@@ -2,18 +2,19 @@ use crate::image::hittable::aabb::AABB;
 use crate::image::hittable::{HitRecord, Hittable, HittableObjects};
 use crate::image::ray::Ray;
 use crate::image::util;
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell};
 use std::cmp::Ordering;
 use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct BvhNode {
-    hittable: Option<Hittable>,
+    hittable: Option<HittablePtr>,
     bbox: AABB,
     left: Option<BvhNodePtr>,
     right: Option<BvhNodePtr>,
 }
 type BvhNodePtr = Rc<RefCell<BvhNode>>;
+type HittablePtr = Rc<RefCell<Hittable>>;
 impl BvhNode {
     pub fn empty() -> Self {
         Self {
@@ -32,7 +33,7 @@ impl BvhNode {
         Self {
             bbox: hittable.bounding_box(),
             left: None,
-            hittable: Option::from(hittable),
+            hittable: Option::from(Rc::from(RefCell::from(hittable))),
             right: None,
         }
     }
@@ -116,7 +117,7 @@ impl BvhNode {
         }
 
         if let Some(hittable) = self.hittable.as_ref() {
-            return hittable.hit(&ray, *ray_t, rec);
+            return hittable.borrow().hit(&ray, *ray_t, rec);
         }
 
         let mut hit_left = false;

@@ -349,14 +349,14 @@ impl Hittable {
 #[derive(Clone)]
 pub struct HittableObjects {
     objects: Vec<Hittable>,
-    bvh: BvhNode,
+    // bvh: BvhNode,
 }
 
 impl HittableObjects {
     pub fn new() -> Self {
         Self {
             objects: Vec::new(),
-            bvh: BvhNode::empty(),
+            // bvh: BvhNode::empty(),
         }
     }
 
@@ -368,18 +368,18 @@ impl HittableObjects {
         self.objects.extend(hittables.objects);
     }
 
-    pub fn bounding_box(&self) -> AABB {
-        self.bvh.bounding_box()
-    }
+    // pub fn bounding_box(&self) -> AABB {
+    //     self.bvh.bounding_box()
+    // }
 
     pub fn clear(&mut self) {
         self.objects.clear();
-        self.bvh = BvhNode::empty();
+        // self.bvh = BvhNode::empty();
     }
 
-    pub fn init_bvh(&mut self) {
-        self.bvh = BvhNode::new(self);
-    }
+    // pub fn init_bvh(&mut self) {
+    //     // self.bvh = BvhNode::new(self);
+    // }
 
     pub fn hit(&self, ray: &Ray, ray_t: util::Interval, rec: &mut HitRecord) -> bool {
         let mut closest_so_far = ray_t.max;
