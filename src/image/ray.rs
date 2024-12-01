@@ -48,7 +48,7 @@ impl Ray {
         }
         let mut rec = HitRecord::default();
         let interval = util::Interval::new(0.001, f64::INFINITY);
-        if !world.hit(self, interval, &mut rec) {
+        if !world.hit(self,interval, &mut rec) {
             return background;
         }
         let mut ray_scattered = Ray::default();

@@ -7,7 +7,6 @@ use crate::image::util::random_interval;
 use hittable::{Hittable, HittableObjects, Material};
 use image::{ImageBuffer, RgbImage};
 use indicatif::ProgressBar;
-use rand::seq::SliceRandom;
 use ray::Ray;
 use rayon::prelude::*;
 use vector::{Color, Vector};
@@ -185,9 +184,10 @@ impl Image {
             _ => {}
         }
     }
+
     fn final_scene(&mut self) {
         let ground = Material::new_lambertian(Texture::new_solid(Color::new(0.48, 0.83, 0.53)));
-        let boxes_per_side = 10;
+        let boxes_per_side = 20;
         for i in 0..boxes_per_side {
             for j in 0..boxes_per_side {
                 let w = 100.;
@@ -195,7 +195,7 @@ impl Image {
                 let z0 = -1000. + (j as f64) * w;
                 let y0 = 0.;
                 let x1 = x0 + w;
-                let y1 = random_interval(10., 101.);
+                let y1 = random_interval(1., 101.);
                 let z1 = z0 + w;
                 self.world.add_hittables(HittableObjects::new_box(
                     Vector::new(x0, y0, z0),
@@ -565,6 +565,7 @@ impl Image {
     pub fn render(&mut self) {
         let case = 8;
         self.create_scene(case);
+        // self.world.init_bvh();
         let pb = ProgressBar::new((self.image_height) as u64);
         for i in 0..self.image_height {
             for j in 0..self.image_width {
@@ -588,7 +589,7 @@ impl Image {
                     .unwrap();
             }
         }
-        self.buffer.save("image.png").unwrap();
+        self.buffer.save("../image3.png").unwrap();
         self.world.clear();
         pb.finish_with_message(format!("Total Time Spent: {:?}", pb.elapsed()));
     }

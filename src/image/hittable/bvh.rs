@@ -2,7 +2,7 @@ use crate::image::hittable::aabb::AABB;
 use crate::image::hittable::{HitRecord, Hittable, HittableObjects};
 use crate::image::ray::Ray;
 use crate::image::util;
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::rc::Rc;
 
@@ -77,9 +77,6 @@ impl BvhNode {
         let object_span = end - start;
         if object_span == 1 {
             return Self::new_from_object(list[start].clone());
-        } else if object_span == 2 {
-            left = Self::new_from_object(list[start].clone());
-            right = Self::new_from_object(list[start + 1].clone());
         } else {
             Self::sort_slice(list, start, end, comparator);
             let mid = start + object_span / 2;

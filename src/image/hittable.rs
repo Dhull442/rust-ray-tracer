@@ -1,7 +1,6 @@
 use crate::image::ray::Ray;
 use crate::image::util;
 use crate::image::vector::{Color, Vector};
-use log::log;
 use std::f64::consts::{E, PI};
 use std::f64::INFINITY;
 
@@ -11,7 +10,6 @@ pub mod bvh;
 pub mod material;
 pub mod texture;
 
-use crate::image::hittable::bvh::BvhNode;
 use crate::image::hittable::texture::Texture;
 use crate::image::util::{random, Interval};
 pub use material::{HitRecord, Material};
@@ -378,7 +376,7 @@ impl HittableObjects {
     }
 
     // pub fn init_bvh(&mut self) {
-    //     // self.bvh = BvhNode::new(self);
+    //     self.bvh = BvhNode::new(self);
     // }
 
     pub fn hit(&self, ray: &Ray, ray_t: util::Interval, rec: &mut HitRecord) -> bool {
@@ -392,6 +390,7 @@ impl HittableObjects {
         }
         hit_something
     }
+
 
     pub fn new_box(a: Vector, b: Vector, material: Material) -> Self {
         let mut sides = Self::new();
