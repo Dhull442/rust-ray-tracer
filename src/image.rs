@@ -435,23 +435,28 @@ impl Image {
         self.world.add(q6);
 
         let mut box1 = HittableObjects::new_box(
-            Vector::new(0., 0., 0.),
+            Vector::zero(),
             Vector::new(165., 330., 165.),
-            white.clone(),
+            Material::new_metal(Color::new(0.8,0.85, 0.88),0.0),
         );
         box1.rotate_y(15.);
         box1.translate(Vector::new(265., 0., 295.));
         self.world.add_hittables(box1);
 
-        let mut box2 = HittableObjects::new_box(
-            Vector::new(0., 0., 0.),
-            Vector::new(165., 165., 165.),
-            white,
-        );
+        // let mut box2 = HittableObjects::new_box(
+        //     Vector::zero(),
+        //     Vector::new(165., 165., 165.),
+        //     white,
+        // );
+        //
+        // box2.rotate_y(-18.);
+        // box2.translate(Vector::new(130., 0., 65.));
+        // self.world.add_hittables(box2);
 
-        box2.rotate_y(-18.);
-        box2.translate(Vector::new(130., 0., 65.));
-        self.world.add_hittables(box2);
+        let mut glass = Hittable::new_sphere(Vector::zero(),90.,Material::new_dielectric(1.5));
+        glass.translate(Vector::new(165., 90., 165.));
+        self.world.add(glass);
+
     }
     fn simple_lights(&mut self) {
         self.perlin_noise();
@@ -649,7 +654,7 @@ impl Image {
                         )
                     })
                     .collect::<Vec<Color>>();
-                let pixel_color = self.camera.pixel_sample_scale
+                let mut pixel_color = self.camera.pixel_sample_scale
                     * colors
                         .into_iter()
                         .fold(Color::black(), |acc, color| acc + color);

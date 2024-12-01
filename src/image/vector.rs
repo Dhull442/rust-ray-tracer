@@ -1,5 +1,6 @@
 use crate::image::util::{random, random_interval, Interval};
 use core::ops::{Add, Div, Mul, Neg, Sub};
+use std::f64::consts::PI;
 use image::Rgb;
 
 #[derive(Default, Copy, Clone)]
@@ -78,6 +79,18 @@ impl Vector {
     pub fn random_in_unit_disk() -> Self {
         let theta = 2.0 * std::f64::consts::PI * random();
         Self::new(f64::cos(theta), f64::sin(theta), 0.0)
+    }
+
+    pub fn random_to_sphere(radius: f64, dist_sqrd: f64) -> Self {
+        let r1 = random();
+        let r2 = random();
+        let z = 1.0 + r2 * ((1.0 - (radius * radius) / dist_sqrd).sqrt() - 1.0);
+
+        let phi = 2.0 * PI * r1;
+        let x = f64::cos(phi) * (1.0 - z * z).sqrt();
+        let y = f64::sin(phi) * (1.0 - z * z).sqrt();
+        Self::new(x, y, z)
+
     }
 
     pub fn near_zero(&self) -> bool {
@@ -191,8 +204,17 @@ impl Color {
         Self { r, g, b }
     }
 
-    pub fn as_pixel(&self) -> Rgb<u8> {
+    pub fn as_pixel(&mut self) -> Rgb<u8> {
         let intensity = Interval::new(0.000, 0.999);
+        if self.r.is_nan() {
+            self.r = 0.0;
+        }
+        if self.g.is_nan() {
+            self.g = 0.0;
+        }
+        if self.b.is_nan() {
+            self.b = 0.0;
+        }
         let write_r = 256.0 * intensity.clamp(Self::linear_to_gamma(self.r));
         let write_g = 256.0 * intensity.clamp(Self::linear_to_gamma(self.g));
         let write_b = 256.0 * intensity.clamp(Self::linear_to_gamma(self.b));

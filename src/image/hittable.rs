@@ -11,7 +11,8 @@ pub mod material;
 
 use crate::image::util::{random, random_interval, Interval};
 use material::texture::Texture;
-pub use material::{HitRecord, Material};
+pub use material::{HitRecord, Material, ScatterRecord};
+use crate::image::hittable::material::onb::ONB;
 
 #[derive(Clone)]
 pub enum HittableType {
@@ -348,6 +349,11 @@ impl Hittable {
     pub fn random(&self, origin: Vector) -> Vector {
         match self.hittable {
             HittableType::Quad { q, u, v, .. } => q + (random() * u) + (random() * v) - origin,
+            HittableType::Sphere {center,radius,..} => {
+                let direction = center.at(0.0) - origin;
+                let dist_sqrd = direction.len_squared();
+                ONB::new(direction).transform(Vector::random_to_sphere(radius,dist_sqrd))
+            },
             _ => Vector::new(1.0, 0.0, 0.0),
         }
     }
@@ -355,17 +361,31 @@ impl Hittable {
     pub fn pdf_value(&self, origin: Vector, direction: Vector) -> f64 {
         match self.hittable {
             HittableType::Quad { area, .. } => {
-                let mut rec: HitRecord = Default::default();
-                if (!self.hit(
+                let mut hit_record: HitRecord = Default::default();
+                if !self.hit(
                     &Ray::new(origin, direction),
                     Interval::new(0.001, INFINITY),
-                    &mut rec,
-                )) {
+                    &mut hit_record,
+                ) {
                     return 0.0;
                 }
-                let dist_squared = rec.t * rec.t * direction.len_squared();
-                let cosine = direction.dot(rec.normal).abs() / direction.len();
+                let dist_squared = hit_record.t * hit_record.t * direction.len_squared();
+                let cosine = direction.dot(hit_record.normal).abs() / direction.len();
                 dist_squared / (cosine * area)
+            }
+            HittableType::Sphere { center,radius,.. } => {
+                let mut hit_record: HitRecord = Default::default();
+                if !self.hit(
+                    &Ray::new(origin, direction),
+                    Interval::new(0.001, INFINITY),
+                    &mut hit_record,
+                ) {
+                    return 0.0
+                }
+                let dist_squared = (center.at(0.0) - origin).len_squared();
+                let cos_theta_max = (1.0 - (radius * radius)/dist_squared).sqrt();
+                let solid_angle = 2.0* PI * (1.0 - cos_theta_max);
+                1.0 / solid_angle
             }
             _ => 0.0,
         }

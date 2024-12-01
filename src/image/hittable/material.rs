@@ -1,11 +1,12 @@
 use crate::image::ray::Ray;
 use crate::image::util;
 use crate::image::vector::{Color, Vector};
-use onb::ONB;
+// use onb::ONB;
 use std::f64::consts::PI;
 use texture::Texture;
+use crate::image::hittable::material::pdf::PDF;
 
-mod onb;
+pub mod onb;
 pub mod pdf;
 pub mod texture;
 
@@ -77,23 +78,21 @@ impl Material {
     pub fn scatter(
         &self,
         ray_in: &Ray,
-        rec: &HitRecord,
-        attenuation: &mut Color,
-        ray_scattered: &mut Ray,
-        pdf: &mut f64,
+        hit_record: &HitRecord,
+        scatter_record: &mut ScatterRecord,
     ) -> bool {
         match self.material {
             MaterialType::Lambertian { .. } => {
-                self.scatter_lambertian(ray_in, rec, attenuation, ray_scattered, pdf)
+                self.scatter_lambertian(ray_in, hit_record, scatter_record)
             }
             MaterialType::Metal { .. } => {
-                self.scatter_metal(ray_in, rec, attenuation, ray_scattered, pdf)
+                self.scatter_metal(ray_in, hit_record, scatter_record)
             }
             MaterialType::Dielectric { .. } => {
-                self.scatter_dielectric(ray_in, rec, attenuation, ray_scattered, pdf)
+                self.scatter_dielectric(ray_in, hit_record, scatter_record)
             }
             MaterialType::Isotropic { .. } => {
-                self.scatter_isotropic(ray_in, rec, attenuation, ray_scattered, pdf)
+                self.scatter_isotropic(ray_in, hit_record, scatter_record)
             }
             _ => false,
         }
@@ -120,61 +119,56 @@ impl Material {
         &self,
         ray_in: &Ray,
         rec: &HitRecord,
-        attenuation: &mut Color,
-        ray_scattered: &mut Ray,
-        pdf: &mut f64,
+        scatter_record: &mut ScatterRecord,
     ) -> bool {
         let MaterialType::Isotropic { texture } = &self.material else {
             return false;
         };
-        *ray_scattered = Ray::new_time(rec.p, Vector::random_unit_vector(), ray_in.time());
-        *pdf = 1.0 / (4.0 * PI);
-        *attenuation = texture.value(rec.u, rec.v, rec.p);
+        // *ray_scattered = Ray::new_time(rec.p, Vector::random_unit_vector(), ray_in.time());
+        scatter_record.attenuation = texture.value(rec.u, rec.v, rec.p);
+        scatter_record.skip_pdf = false;
+        scatter_record.pdf = PDF::new_sphere();
         true
     }
     fn scatter_lambertian(
         &self,
         ray_in: &Ray,
         rec: &HitRecord,
-        attenuation: &mut Color,
-        ray_scattered: &mut Ray,
-        pdf: &mut f64,
+        scatter_record: &mut ScatterRecord,
     ) -> bool {
         let MaterialType::Lambertian { texture } = self.material.clone() else {
             return false;
         };
-        let uvw = ONB::new(rec.normal);
-        let scatter_direction = uvw.transform(Vector::random_unit_vector());
-        *ray_scattered = Ray::new_time(rec.p, scatter_direction.unit_vector(), ray_in.time());
-        *pdf = uvw.w().dot(ray_scattered.direction()) / PI;
-        *attenuation = texture.value(rec.u, rec.v, rec.p);
+        // let uvw = ONB::new(rec.normal);
+        // let scatter_direction = uvw.transform(Vector::random_unit_vector());
+        // *ray_scattered = Ray::new_time(rec.p, scatter_direction.unit_vector(), ray_in.time());
+        scatter_record.skip_pdf=false;
+        scatter_record.pdf = PDF::new_cosine(rec.normal);
+        scatter_record.attenuation = texture.value(rec.u, rec.v, rec.p);
         true
     }
     fn scatter_metal(
         &self,
         ray_in: &Ray,
         rec: &HitRecord,
-        attenuation: &mut Color,
-        ray_scattered: &mut Ray,
-        pdf: &mut f64,
+        scatter_record: &mut ScatterRecord,
     ) -> bool {
         let MaterialType::Metal { albedo, fuzz } = self.material else {
             return false;
         };
         let mut reflected = Vector::reflect(&(ray_in.direction()), rec.normal);
         reflected = reflected.unit_vector() + fuzz * Vector::random_unit_vector();
-        *ray_scattered = Ray::new_time(rec.p, reflected, ray_in.time());
-        *attenuation = albedo;
-        ray_scattered.direction().dot(rec.normal) > 0.0
+        scatter_record.attenuation = albedo;
+        scatter_record.skip_pdf = true;
+        scatter_record.skip_pdf_ray = Ray::new_time(rec.p, reflected, ray_in.time());
+        true
     }
 
     fn scatter_dielectric(
         &self,
         ray_in: &Ray,
         rec: &HitRecord,
-        attenuation: &mut Color,
-        ray_scattered: &mut Ray,
-        pdf: &mut f64,
+        scatter_record: &mut ScatterRecord,
     ) -> bool {
         let MaterialType::Dielectric { refraction_index } = self.material else {
             return false;
@@ -193,8 +187,9 @@ impl Material {
         } else {
             unit_direction.refract(rec.normal, ri)
         };
-        *attenuation = Color::white();
-        *ray_scattered = Ray::new_time(rec.p, direction, ray_in.time());
+        scatter_record.attenuation = Color::white();
+        scatter_record.skip_pdf = true;
+        scatter_record.skip_pdf_ray = Ray::new_time(rec.p, direction, ray_in.time());
         true
     }
 
@@ -213,6 +208,14 @@ pub struct HitRecord {
     pub material: Material,
     pub u: f64,
     pub v: f64,
+}
+
+#[derive(Default)]
+pub struct ScatterRecord {
+    pub attenuation: Color,
+    pub pdf: PDF,
+    pub skip_pdf: bool,
+    pub skip_pdf_ray: Ray,
 }
 
 impl HitRecord {

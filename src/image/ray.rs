@@ -1,5 +1,5 @@
-use crate::image::hittable::material::pdf::{MixPDF, PDF};
-use crate::image::hittable::material::HitRecord;
+use crate::image::hittable::material::pdf::{PDF};
+use crate::image::hittable::material::{HitRecord, ScatterRecord};
 use crate::image::hittable::HittableObjects;
 use crate::image::util;
 use crate::image::util::random_interval;
@@ -59,26 +59,27 @@ impl Ray {
         if !world.hit(self, interval, &mut rec) {
             return background;
         }
-        let mut ray_scattered = Ray::default();
-        let mut attenuation = Color::black();
-        let mut pdf = 0.;
+        let mut scatter_record = ScatterRecord::default();
         let color_from_emission = rec.material.emitted(self, &rec);
         if !rec
             .material
-            .scatter(self, &rec, &mut attenuation, &mut ray_scattered, &mut pdf)
+            .scatter(self, &rec, &mut scatter_record)
         {
             return color_from_emission;
         }
-        let cosine_pdf = PDF::new_cosine(rec.normal);
-        let light_pdf = PDF::new_lights(lights, rec.p);
-        let mut mix_pdf = MixPDF::new();
-        mix_pdf.add(cosine_pdf);
-        mix_pdf.add(light_pdf);
-        ray_scattered = Ray::new_time(rec.p, mix_pdf.generate(), self.time);
-        pdf = mix_pdf.value(ray_scattered.direction);
+
+        if scatter_record.skip_pdf {
+            return scatter_record.attenuation * scatter_record.skip_pdf_ray.color(depth - 1, world, background, lights);
+        }
+
+        let mut mix_pdf = PDF::new_mix();
+        mix_pdf.add_to_mix(scatter_record.pdf);
+        mix_pdf.add_to_mix(PDF::new_lights(lights, rec.p));
+        let ray_scattered = Ray::new_time(rec.p, mix_pdf.generate(), self.time);
+        let pdf = mix_pdf.value(ray_scattered.direction);
         let scattering_pdf = rec.material.scattering_pdf(self, &rec, &ray_scattered);
         let sample_color = ray_scattered.color(depth - 1, world, background, lights);
-        let color_from_scatter = (scattering_pdf * attenuation * sample_color) / pdf;
+        let color_from_scatter = (scattering_pdf * scatter_record.attenuation * sample_color) / pdf;
         color_from_emission + color_from_scatter
     }
 }

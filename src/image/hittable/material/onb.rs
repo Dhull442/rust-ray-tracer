@@ -1,5 +1,6 @@
 use crate::image::vector::Vector;
 
+#[derive(Clone)]
 pub struct ONB {
     axis: Vec<Vector>,
 }
