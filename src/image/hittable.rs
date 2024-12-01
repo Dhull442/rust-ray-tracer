@@ -8,10 +8,9 @@ mod aabb;
 use aabb::AABB;
 pub mod bvh;
 pub mod material;
-pub mod texture;
 
-use crate::image::hittable::texture::Texture;
-use crate::image::util::{random, Interval};
+use crate::image::util::{random, random_interval, Interval};
+use material::texture::Texture;
 pub use material::{HitRecord, Material};
 
 #[derive(Clone)]
@@ -27,6 +26,7 @@ pub enum HittableType {
         w: Vector,
         normal: Vector,
         d: f64,
+        area: f64,
     },
 }
 
@@ -123,6 +123,7 @@ impl Hittable {
         let normal = n.unit_vector();
         let d = normal.dot(q);
         let w = n / n.dot(n);
+        let area = n.len();
         Self {
             hittable: HittableType::Quad {
                 q,
@@ -131,6 +132,7 @@ impl Hittable {
                 w,
                 normal,
                 d,
+                area,
             },
             material,
             bbox: AABB::new_from_aabb(&bbox_d1, &bbox_d2),
@@ -342,6 +344,32 @@ impl Hittable {
     pub fn bounding_box(&self) -> AABB {
         self.bbox
     }
+
+    pub fn random(&self, origin: Vector) -> Vector {
+        match self.hittable {
+            HittableType::Quad { q, u, v, .. } => q + (random() * u) + (random() * v) - origin,
+            _ => Vector::new(1.0, 0.0, 0.0),
+        }
+    }
+
+    pub fn pdf_value(&self, origin: Vector, direction: Vector) -> f64 {
+        match self.hittable {
+            HittableType::Quad { area, .. } => {
+                let mut rec: HitRecord = Default::default();
+                if (!self.hit(
+                    &Ray::new(origin, direction),
+                    Interval::new(0.001, INFINITY),
+                    &mut rec,
+                )) {
+                    return 0.0;
+                }
+                let dist_squared = rec.t * rec.t * direction.len_squared();
+                let cosine = direction.dot(rec.normal).abs() / direction.len();
+                dist_squared / (cosine * area)
+            }
+            _ => 0.0,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -390,7 +418,6 @@ impl HittableObjects {
         }
         hit_something
     }
-
 
     pub fn new_box(a: Vector, b: Vector, material: Material) -> Self {
         let mut sides = Self::new();
@@ -452,9 +479,19 @@ impl HittableObjects {
         }
     }
 
-    pub fn add_medium(&mut self, density: f64, albedo: Color) {
-        for object in self.objects.iter_mut() {
-            object.add_medium(density, albedo);
+    pub fn random(&self, origin: Vector) -> Vector {
+        if self.objects.is_empty() {
+            return Vector::new(1.0, 0.0, 0.0);
         }
+        let i = random_interval(0., self.objects.len() as f64).floor() as usize;
+        self.objects[i].random(origin)
+    }
+
+    pub fn pdf_value(&self, origin: Vector, direction: Vector) -> f64 {
+        if self.objects.is_empty() {
+            return 0.001;
+        }
+        let i = random_interval(0., self.objects.len() as f64).floor() as usize;
+        self.objects[i].pdf_value(origin, direction)
     }
 }

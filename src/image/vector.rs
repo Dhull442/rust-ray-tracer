@@ -61,8 +61,8 @@ impl Vector {
 
     pub fn random_unit_vector() -> Self {
         let theta = 2.0 * std::f64::consts::PI * random();
-        let z = random_interval(-1.0, 1.0);
-        let r = (1.0 - z.powf(2.0)).sqrt();
+        let z = random();
+        let r = (1.0 - z).sqrt();
         Self::new(r * f64::cos(theta), r * f64::sin(theta), z)
     }
 
@@ -284,6 +284,18 @@ impl Mul for Color {
             r: self.r * other.r,
             g: self.g * other.g,
             b: self.b * other.b,
+        }
+    }
+}
+
+impl Div<f64> for Color {
+    type Output = Self;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        Self {
+            r: self.r / rhs,
+            g: self.g / rhs,
+            b: self.b / rhs,
         }
     }
 }

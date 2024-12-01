@@ -1,7 +1,13 @@
-use crate::image::hittable::texture::Texture;
 use crate::image::ray::Ray;
 use crate::image::util;
 use crate::image::vector::{Color, Vector};
+use onb::ONB;
+use std::f64::consts::PI;
+use texture::Texture;
+
+mod onb;
+pub mod pdf;
+pub mod texture;
 
 #[derive(Clone)]
 pub enum MaterialType {
@@ -57,42 +63,57 @@ impl Material {
             material: MaterialType::Isotropic { texture },
         }
     }
+
+    pub fn scattering_pdf(&self, ray_in: &Ray, rec: &HitRecord, scattered: &Ray) -> f64 {
+        match self.material {
+            MaterialType::Lambertian { .. } => {
+                let cos_theta = rec.normal.dot(scattered.direction().unit_vector());
+                f64::max(0.0, cos_theta / PI)
+            }
+            MaterialType::Isotropic { .. } => 1.0 / (4.0 * PI),
+            _ => 1.0,
+        }
+    }
     pub fn scatter(
         &self,
         ray_in: &Ray,
         rec: &HitRecord,
         attenuation: &mut Color,
         ray_scattered: &mut Ray,
+        pdf: &mut f64,
     ) -> bool {
         match self.material {
             MaterialType::Lambertian { .. } => {
-                self.scatter_lambertian(ray_in, rec, attenuation, ray_scattered)
+                self.scatter_lambertian(ray_in, rec, attenuation, ray_scattered, pdf)
             }
             MaterialType::Metal { .. } => {
-                self.scatter_metal(ray_in, rec, attenuation, ray_scattered)
+                self.scatter_metal(ray_in, rec, attenuation, ray_scattered, pdf)
             }
             MaterialType::Dielectric { .. } => {
-                self.scatter_dielectric(ray_in, rec, attenuation, ray_scattered)
+                self.scatter_dielectric(ray_in, rec, attenuation, ray_scattered, pdf)
             }
             MaterialType::Isotropic { .. } => {
-                self.scatter_isotropic(ray_in, rec, attenuation, ray_scattered)
+                self.scatter_isotropic(ray_in, rec, attenuation, ray_scattered, pdf)
             }
             _ => false,
         }
     }
 
-    pub fn emitted(&self, u: f64, v: f64, p: Vector) -> Color {
+    pub fn emitted(&self, ray_in: &Ray, rec: &HitRecord) -> Color {
         match &self.material {
-            MaterialType::DiffuseLight { .. } => self.emitted_diffuse_light(u, v, p),
+            MaterialType::DiffuseLight { .. } => self.emitted_diffuse_light(ray_in, rec),
             _ => Color::black(),
         }
     }
 
-    fn emitted_diffuse_light(&self, u: f64, v: f64, p: Vector) -> Color {
+    fn emitted_diffuse_light(&self, ray_in: &Ray, rec: &HitRecord) -> Color {
         let MaterialType::DiffuseLight { texture } = &self.material else {
             return Color::black();
         };
-        texture.value(u, v, p)
+        if !rec.front_face {
+            return Color::black();
+        }
+        texture.value(rec.u, rec.v, rec.p)
     }
 
     fn scatter_isotropic(
@@ -101,11 +122,13 @@ impl Material {
         rec: &HitRecord,
         attenuation: &mut Color,
         ray_scattered: &mut Ray,
+        pdf: &mut f64,
     ) -> bool {
         let MaterialType::Isotropic { texture } = &self.material else {
             return false;
         };
         *ray_scattered = Ray::new_time(rec.p, Vector::random_unit_vector(), ray_in.time());
+        *pdf = 1.0 / (4.0 * PI);
         *attenuation = texture.value(rec.u, rec.v, rec.p);
         true
     }
@@ -115,15 +138,15 @@ impl Material {
         rec: &HitRecord,
         attenuation: &mut Color,
         ray_scattered: &mut Ray,
+        pdf: &mut f64,
     ) -> bool {
         let MaterialType::Lambertian { texture } = self.material.clone() else {
             return false;
         };
-        let mut scatter_direction = rec.normal + Vector::random_unit_vector();
-        if scatter_direction.near_zero() {
-            scatter_direction = rec.normal;
-        }
-        *ray_scattered = Ray::new_time(rec.p, scatter_direction, ray_in.time());
+        let uvw = ONB::new(rec.normal);
+        let scatter_direction = uvw.transform(Vector::random_unit_vector());
+        *ray_scattered = Ray::new_time(rec.p, scatter_direction.unit_vector(), ray_in.time());
+        *pdf = uvw.w().dot(ray_scattered.direction()) / PI;
         *attenuation = texture.value(rec.u, rec.v, rec.p);
         true
     }
@@ -133,6 +156,7 @@ impl Material {
         rec: &HitRecord,
         attenuation: &mut Color,
         ray_scattered: &mut Ray,
+        pdf: &mut f64,
     ) -> bool {
         let MaterialType::Metal { albedo, fuzz } = self.material else {
             return false;
@@ -150,6 +174,7 @@ impl Material {
         rec: &HitRecord,
         attenuation: &mut Color,
         ray_scattered: &mut Ray,
+        pdf: &mut f64,
     ) -> bool {
         let MaterialType::Dielectric { refraction_index } = self.material else {
             return false;

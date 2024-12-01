@@ -1,10 +1,10 @@
 use rand::Rng;
-use std::f64::consts;
+use std::f64::consts::PI;
 use std::ops::Add;
 
 // Utility Functions
 pub fn degree_to_radians(degree: f64) -> f64 {
-    (degree * consts::PI) / 180.0
+    (degree * PI) / 180.0
 }
 
 pub fn random() -> f64 {

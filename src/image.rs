@@ -2,8 +2,8 @@ mod hittable;
 mod ray;
 mod util;
 mod vector;
-use crate::image::hittable::texture::Texture;
-use crate::image::util::random_interval;
+use crate::image::util::{random, random_interval};
+use hittable::material::texture::Texture;
 use hittable::{Hittable, HittableObjects, Material};
 use image::{ImageBuffer, RgbImage};
 use indicatif::ProgressBar;
@@ -36,6 +36,8 @@ pub struct Camera {
     defocus_disk_u: Vector,
     defocus_dish_v: Vector,
     background: Color,
+    sqrt_spp: u32,
+    recip_sqrt_spp: f64,
 }
 
 impl Camera {
@@ -69,6 +71,8 @@ impl Camera {
         let defocus_radius = focus_dist * f64::tan(util::degree_to_radians(defocus_angle / 2.0));
         let defocus_disk_u = u * defocus_radius;
         let defocus_dish_v = v * defocus_radius;
+        let sqrt_spp = (sample_per_pixel as f64).sqrt() as u32;
+        let recip_sqrt_spp = 1.0 / sqrt_spp as f64;
         Self {
             viewport_height,
             viewport_width,
@@ -94,11 +98,13 @@ impl Camera {
             defocus_disk_u,
             defocus_dish_v,
             background,
+            sqrt_spp,
+            recip_sqrt_spp,
         }
     }
 
-    pub fn get_ray(&self, idx_width: u32, idx_height: u32) -> Ray {
-        let offset = Self::sample_square();
+    pub fn get_ray(&self, idx_width: u32, idx_height: u32, s_width: u32, s_height: u32) -> Ray {
+        let offset = self.sample_square_stratified(s_width, s_height);
         let pixel_sample = self.pixel00_loc
             + (idx_width as f64 + offset.x) * self.pixel_delta_u
             + (idx_height as f64 + offset.y) * self.pixel_delta_v;
@@ -119,6 +125,14 @@ impl Camera {
     fn sample_square() -> Vector {
         Vector::new(util::random() - 0.5, util::random() - 0.5, 0.0)
     }
+
+    fn sample_square_stratified(&self, s_i: u32, s_j: u32) -> Vector {
+        Vector::new(
+            (s_i as f64 + random()) * self.recip_sqrt_spp - 0.5,
+            (s_j as f64 + random()) * self.recip_sqrt_spp - 0.5,
+            0.,
+        )
+    }
 }
 
 pub struct Image {
@@ -128,6 +142,7 @@ pub struct Image {
     camera: Camera,
     buffer: RgbImage,
     world: HittableObjects,
+    lights: HittableObjects,
 }
 
 impl Image {
@@ -143,7 +158,7 @@ impl Image {
                 sample_per_pixel,
                 max_depth,
                 40.0,
-                Vector::new(478.0, 278.0, -600.0),
+                Vector::new(278.0, 278.0, -800.0),
                 Vector::new(278.0, 278.0, 0.0),
                 Vector::new(0.0, 1.0, 0.0),
                 0.0,
@@ -153,6 +168,7 @@ impl Image {
             ),
             buffer: ImageBuffer::new(image_width, image_height),
             world: HittableObjects::new(),
+            lights: HittableObjects::new(),
         }
     }
     fn create_scene(&mut self, case: usize) {
@@ -365,7 +381,7 @@ impl Image {
         let red = Material::new_lambertian(Texture::new_solid(Color::new(0.65, 0.05, 0.05)));
         let white = Material::new_lambertian(Texture::new_solid(Color::new(0.73, 0.73, 0.73)));
         let green = Material::new_lambertian(Texture::new_solid(Color::new(0.12, 0.45, 0.15)));
-        let light = Material::new_diffuse_light(Texture::new_solid(Color::new(15., 15.0, 15.0)));
+        let light = Material::new_diffuse_light(Texture::new_solid(Color::new(7., 7.0, 7.0)));
 
         let q1 = Hittable::new_quad(
             Vector::new(555., 0., 0.),
@@ -384,6 +400,12 @@ impl Image {
             Vector::new(-130., 0., 0.),
             Vector::new(0., 0., -105.),
             light,
+        );
+        let light_object = Hittable::new_quad(
+            Vector::new(343., 554., 332.),
+            Vector::new(-130., 0., 0.),
+            Vector::new(0., 0., -105.),
+            Material::default(),
         );
         let q4 = Hittable::new_quad(
             Vector::new(0., 0., 0.),
@@ -407,6 +429,7 @@ impl Image {
         self.world.add(q1);
         self.world.add(q2);
         self.world.add(q3);
+        self.lights.add(light_object);
         self.world.add(q4);
         self.world.add(q5);
         self.world.add(q6);
@@ -570,13 +593,14 @@ impl Image {
         for i in 0..self.image_height {
             for j in 0..self.image_width {
                 let mut pixel_color = Color::black();
-                for _ in 0..self.camera.sample_per_pixel {
+                for s in 0..self.camera.sample_per_pixel {
                     pixel_color = pixel_color
                         + self.camera.pixel_sample_scale
-                            * self.camera.get_ray(j, i).color(
+                            * self.camera.get_ray(j, i, s / 2, s / 2).color(
                                 self.camera.max_depth,
                                 &self.world,
                                 self.camera.background,
+                                &self.lights,
                             );
                 }
                 self.buffer.put_pixel(j, i, pixel_color.as_pixel());
@@ -589,31 +613,39 @@ impl Image {
                     .unwrap();
             }
         }
-        self.buffer.save("../image3.png").unwrap();
+        self.buffer.save("image.png").unwrap();
         self.world.clear();
         pb.finish_with_message(format!("Total Time Spent: {:?}", pb.elapsed()));
     }
 
     pub fn render_par(&mut self) {
-        let case = 8;
+        let case = 6;
         self.create_scene(case);
         let pb = ProgressBar::new((self.image_height * self.image_width) as u64);
         let mut pixels = vec![];
+        let mut samples = vec![];
         for i in 0..self.image_height {
             for j in 0..self.image_width {
                 pixels.push((i, j));
             }
         }
+        for si in 0..self.camera.sqrt_spp {
+            for sj in 0..self.camera.sqrt_spp {
+                samples.push((si, sj));
+            }
+        }
         let pixels = pixels
             .into_par_iter()
             .map(|(i, j)| {
-                let colors = (0..self.camera.sample_per_pixel)
+                let colors = samples
+                    .clone()
                     .into_par_iter()
-                    .map(|_| {
-                        self.camera.get_ray(j, i).color(
+                    .map(|(si, sj)| {
+                        self.camera.get_ray(j, i, sj, si).color(
                             self.camera.max_depth,
                             &self.world,
                             self.camera.background,
+                            &self.lights,
                         )
                     })
                     .collect::<Vec<Color>>();

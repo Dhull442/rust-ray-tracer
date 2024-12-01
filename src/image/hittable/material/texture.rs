@@ -1,8 +1,10 @@
 mod imagedata;
 use imagedata::ImageData;
 mod perlinnoise;
-use crate::image::hittable::texture::perlinnoise::PerlinNoise;
-use crate::image::hittable::texture::TextureType::{ImageTexture, NoiseTexture, SolidColor};
+use crate::image::hittable::material::texture::perlinnoise::PerlinNoise;
+use crate::image::hittable::material::texture::TextureType::{
+    ImageTexture, NoiseTexture, SolidColor,
+};
 use crate::image::util;
 use crate::image::vector::{Color, Vector};
 #[derive(Clone)]
