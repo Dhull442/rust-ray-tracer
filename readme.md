@@ -13,6 +13,7 @@ Demo Render: <br>
 
 
 
-[_Ray Tracing: In a Weekend_](https://raytracing.github.io/books/RayTracingInOneWeekend.html#outputanimage) \
-[_Ray Tracing: The Next Week_](https://raytracing.github.io/books/RayTracingTheNextWeek.html)
+[_Ray Tracing: In a Weekend_](https://raytracing.github.io/books/RayTracingInOneWeekend.html) \
+[_Ray Tracing: The Next Week_](https://raytracing.github.io/books/RayTracingTheNextWeek.html) \
+[_Ray Tracing: The Rest of Your Life_](https://raytracing.github.io/books/RayTracingTheRestOfYourLife.html)
 
