@@ -3,7 +3,7 @@
 usage: `cargo run`
 
 Most Recent Render: <br>
-![PNG Image](image3.png "Recent Render")
+![PNG Image](image.png "Recent Render")
 
 Demo Render 2: <br>
 ![PNG Image](demo_image_4.png)
